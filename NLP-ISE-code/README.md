@@ -8,7 +8,7 @@
 pip install -r requirements.txt
 
 ## 二、构建 RAG（第一次运行前）
-python rag_builder.py
+python rag/rag_builder.py
 
 ## 三、启动系统
 python main.py
