@@ -32,7 +32,7 @@ def execute_workflow(tasks, tools, retriever, llm):
             q = t.get("args",{}).get("q","")
             try:
                 if retriever:
-                    docs = retriever.get_relevant_documents(q)
+                    docs = retriever.invoke(q)
                     ctx[t["name"]] = "\n".join([d.page_content for d in docs[:3]])
                 else:
                     ctx[t["name"]] = "RAG system not available"

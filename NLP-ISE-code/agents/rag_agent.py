@@ -37,7 +37,7 @@ class RAGAgent:
             return self._call_llm(f"我没有找到关于'{query}'的相关信息。请尝试其他问题或检查知识库内容。")
 
         try:
-            docs = self.retriever.get_relevant_documents(query)
+            docs = self.retriever.invoke(query)
             if docs:
                 reranked = rerank(query, docs)[:5]
                 context = "\n---\n".join([doc.page_content for doc in reranked])

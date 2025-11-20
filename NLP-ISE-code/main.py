@@ -12,6 +12,7 @@ from config.language_settings import (
     set_language_preference,
 )
 from utils.translation_utils import translate_from_english, translate_to_english
+from rag.upload import update as upload_document
 
 # 上下文管理类
 class ConversationContext:
@@ -103,7 +104,10 @@ def load_rag():
 
     try:
         emb = HuggingFaceEmbeddings(model_name=EMB_MODEL)
-        db = Chroma(persist_directory=PERSIST_DIR, embedding_function=emb)
+        db = Chroma(
+            persist_directory=PERSIST_DIR, 
+            embedding_function=emb
+        )
         retriever = db.as_retriever(
             search_type="similarity",
             search_kwargs={"k": 5}
@@ -130,8 +134,9 @@ def main():
     print("ISE System Ready! (Multi-Agent System)")
     print("Available commands:")
     print("  - <your question> (direct input - ask anything!)")
+    print("  - upload <file_path> (upload documents to knowledge base)")
     if MULTIMODAL_AVAILABLE:
-        print("  - upload <file_path>")
+        print("  - multimodal upload <file_path>")
     print("  - history (show conversation history)")
     print("  - clear (clear conversation history)")
     print("  - status (show system status)")
@@ -162,15 +167,31 @@ def main():
                         print(describe_supported_languages())
                 continue
 
-            if cmd.startswith("upload ") and MULTIMODAL_AVAILABLE:
+            if cmd.startswith("upload "):
                 f = cmd.split(" ", 1)[1]
-                if os.path.exists(f):
-                    n = parse_and_index(f)
-                    print(f"Indexed {n} chunks from {f}")
-                else:
-                    print("File not found.")
+                try:
+                    if os.path.exists(f):
+                        chunk_count = upload_document(f)
+                        print(f"Successfully uploaded '{f}' - Generated {chunk_count} text chunks")
+                        print("Tip: You can now ask questions about this document!")
+                    else:
+                        print(f"File not found: {f}")
+                except Exception as e:
+                    print(f"Upload failed: {e}")
+                    print("Supported formats: PDF, CSV, TXT, MD")
                 continue
-            elif cmd.startswith("upload "):
+            
+            if cmd.startswith("multimodal ") and MULTIMODAL_AVAILABLE:
+                parts = cmd.split(" ", 2)
+                if len(parts) >= 3 and parts[1] == "upload":
+                    f = parts[2]
+                    if os.path.exists(f):
+                        n = parse_and_index(f)
+                        print(f"Indexed {n} chunks from {f}")
+                    else:
+                        print("File not found.")
+                continue
+            elif cmd.startswith("multimodal "):
                 print("Multimodal features not available")
                 continue
 

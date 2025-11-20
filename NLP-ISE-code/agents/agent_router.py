@@ -51,8 +51,8 @@ class AgentRouter:
             result = self.finance_agent.run(enhanced_query)
         elif intent == "traffic":
             result = self.traffic_agent.run(enhanced_query)
-        elif intent == "general":
-            result = self.general_agent.run(enhanced_query)
+        # elif intent == "general":
+        #     result = self.general_agent.run(enhanced_query)
         else:
             result = self.rag_agent.run(enhanced_query, fallback_to_llm=True)
 

@@ -14,7 +14,7 @@ class RAGTools:
             return ["知识库不可用"]
         
         try:
-            docs = retriever.get_relevant_documents(query)
+            docs = retriever.invoke(query)
             return [doc.page_content for doc in docs[:top_k]]
         except Exception as e:
             return [f"搜索失败: {e}"]
@@ -34,7 +34,7 @@ class RAGTools:
             return "知识库未初始化"
         try:
             # 尝试一个简单的查询来检查状态
-            test_docs = retriever.get_relevant_documents("测试")
+            test_docs = retriever.invoke("测试")
             return f"知识库运行正常，包含 {len(test_docs)} 个相关文档片段"
         except Exception as e:
             return f"知识库状态异常：{e}"
