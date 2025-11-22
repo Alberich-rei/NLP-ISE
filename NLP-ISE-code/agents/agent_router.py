@@ -28,10 +28,10 @@ class AgentRouter:
         """Use the source selector to classify query intent."""
         try:
             result = select_sources(query)
-            return result.get("intent", "rag")
+            return result.get("intent", "general")#没有对应分类返回general
         except Exception as exc:  # noqa: BLE001 - want to display a friendly fallback
             print(f"Intent classification error: {exc}")
-            return "rag"
+            return "general"
 
     def invoke(self, input_data: Dict[str, Any]) -> Dict[str, str]:
         """Process the user input and route to the appropriate agent."""
@@ -55,10 +55,12 @@ class AgentRouter:
             result = self.traffic_agent.run(enhanced_query)
         elif intent == "transport":
             result = self.transport_agent.run(enhanced_query)
-        # elif intent == "general":
-        #     result = self.general_agent.run(enhanced_query)
+        elif intent == "rag":
+            result = self.rag_agent.run(enhanced_query)
+        elif intent == "general":
+             result = self.general_agent.run(enhanced_query)
         else:
-            result = self.rag_agent.run(enhanced_query, fallback_to_llm=True)
+            result = self.general_agent.run(enhanced_query, fallback_to_llm=True)
 
         return {"output": result}
 

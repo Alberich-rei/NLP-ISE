@@ -12,3 +12,7 @@ tqdm
 python-dotenv
 pymupdf
 scikit-learn
+pytesseract
+pillow
+easyocr
+google-cloud-vision

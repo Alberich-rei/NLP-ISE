@@ -12,5 +12,7 @@ FILE_PATH = "example_docs"
 
 DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+VISION_KEY = "AIzaSyC1Hz15SuKn31tWqZvXI6mpLrCnxheD9mA"
+
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 200

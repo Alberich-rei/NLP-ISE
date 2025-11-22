@@ -13,6 +13,9 @@ from config.language_settings import (
 )
 from utils.translation_utils import translate_from_english, translate_to_english
 from rag.upload import update as upload_document
+from rag.upload import handle_code_upload as code_upload
+from rag.upload import handle_image_upload as image_upload
+
 
 # 上下文管理类
 class ConversationContext:
@@ -117,7 +120,6 @@ def load_rag():
         print(f"Error loading RAG: {e}")
         return None
 
-
 def main():
     init_db()
     llm = HKGAIModel()
@@ -171,14 +173,20 @@ def main():
                 f = cmd.split(" ", 1)[1]
                 try:
                     if os.path.exists(f):
-                        chunk_count = upload_document(f)
+                        if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                            # 如果是图片文件，处理图片
+                            chunk_count = image_upload(f)
+                        elif f.lower().endswith(('.py', '.js', '.java')):  # 代码文件
+                            chunk_count = code_upload(f)
+                        else:
+                            chunk_count = upload_document(f)
                         print(f"Successfully uploaded '{f}' - Generated {chunk_count} text chunks")
                         print("Tip: You can now ask questions about this document!")
                     else:
                         print(f"File not found: {f}")
                 except Exception as e:
                     print(f"Upload failed: {e}")
-                    print("Supported formats: PDF, CSV, TXT, MD")
+                    print("Supported formats: PDF, CSV, TXT, MD, JPG,JPRG, PNG, PY, PY, JS, JAVA")
                 continue
             
             if cmd.startswith("multimodal ") and MULTIMODAL_AVAILABLE:
