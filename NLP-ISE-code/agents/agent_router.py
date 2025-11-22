@@ -10,6 +10,7 @@ from .general_agent import GeneralAgent
 from .rag_agent import RAGAgent
 from .traffic_agent import TrafficAgent
 from .weather_agent import WeatherAgent
+from .transport_agent import TransportAgent
 
 
 class AgentRouter:
@@ -19,6 +20,7 @@ class AgentRouter:
         self.weather_agent = WeatherAgent(llm)
         self.finance_agent = FinanceAgent(llm)
         self.traffic_agent = TrafficAgent(llm)
+        self.transport_agent = TransportAgent(llm)
         self.rag_agent = RAGAgent(llm, retriever)
         self.general_agent = GeneralAgent(llm)
 
@@ -51,6 +53,8 @@ class AgentRouter:
             result = self.finance_agent.run(enhanced_query)
         elif intent == "traffic":
             result = self.traffic_agent.run(enhanced_query)
+        elif intent == "transport":
+            result = self.transport_agent.run(enhanced_query)
         # elif intent == "general":
         #     result = self.general_agent.run(enhanced_query)
         else:
