@@ -100,6 +100,20 @@ GENERAL_KEYWORDS = [
     "解释",
 ]
 
+LOCATION_MARKERS = [
+    "i am at", "i'm at", "i am in", "i'm in",
+    "我在", "位于","地处", "坐标在", "地址是"
+]
+
+# 基础路线需求关键词（无具体方式时，默认驾车）
+NAVIGATION_MARKERS = ["怎么去", "怎么走", "如何到达", "路线", "导航到", "前往", "route to", "navigate to",
+                    "how to get to"]
+
+ACTION_KEYWORDS = ["我要去", "我想去", "想去", "要去", "找", "查找", "附近的", "周边的", "旁边的", "有哪些", "哪里有",
+                   "规划去", "附近有", "前往", "最近的"
+                "want to go to", "go to", "find", "look for", "nearby", "around", "route to", "navigate to",
+                   "drive to", "walk to", "cycle to", "nearest", "cloest"]
+
 
 def _contains_any(text: str, keywords) -> bool:
     return any(keyword in text for keyword in keywords)
@@ -140,8 +154,11 @@ def select_sources(query: str):
         has_weather = _contains_any(lowered, WEATHER_KEYWORDS) or _contains_any(cleaned, WEATHER_KEYWORDS)
         has_finance = _contains_any(lowered, FINANCE_KEYWORDS)
         has_traffic = _contains_any(lowered, TRAFFIC_KEYWORDS) or _contains_any(cleaned, TRAFFIC_KEYWORDS)
+        has_location = _contains_any(lowered, LOCATION_MARKERS)
+        has_poi = _contains_any(lowered, ACTION_KEYWORDS)
+        has_nav = _contains_any(lowered, NAVIGATION_MARKERS)
         
-        if not (has_weather or has_finance or has_traffic):
+        if not (has_weather or has_finance or has_traffic or has_location or has_poi or has_nav):
             return {"intent": "general", "sources": ["general_agent"]}
 
     if _contains_any(lowered, WEATHER_KEYWORDS) or _contains_any(cleaned, WEATHER_KEYWORDS):
@@ -159,10 +176,19 @@ def select_sources(query: str):
     if _contains_any(lowered, TRAFFIC_KEYWORDS) or _contains_any(cleaned, TRAFFIC_KEYWORDS):
         return {"intent": "traffic", "sources": ["traffic_tool"]}
 
+    if _contains_any(lowered, LOCATION_MARKERS) and _contains_any(lowered, ACTION_KEYWORDS):
+        return {"intent": "transport", "sources": ["transport_tool"]}
+
+    if _contains_any(lowered, ACTION_KEYWORDS) and _contains_any(lowered, NAVIGATION_MARKERS):
+        return {"intent": "transport", "sources": ["transport_tool"]}
+
+    if _contains_any(lowered, LOCATION_MARKERS) and _contains_any(lowered, NAVIGATION_MARKERS):
+        return {"intent": "transport", "sources": ["transport_tool"]}
+
     prompt = (
         "You are a routing classifier. Respond with JSON only, e.g. {\"intent\":\"rag\",\"sources\":[\"local_rag\"]}. "
-        "Valid intents: rag, weather, finance, traffic, general, other. "
-        "Valid sources: local_rag, weather_tool, hong_kong_warning_tool, hong_kong_forecast_tool, finance_tool, traffic_tool, general_agent. "
+        "Valid intents: rag, weather, finance, traffic, transport, general, other. "
+        "Valid sources: local_rag, weather_tool, hong_kong_warning_tool, hong_kong_forecast_tool, finance_tool, traffic_tool, transport_tool, general_agent. "
         "Include local_rag when unsure.\n"
         f"Query: {cleaned}"
     )
@@ -187,6 +213,9 @@ def select_sources(query: str):
             elif source == "traffic_tool":
                 if "traffic_tool" not in normalized_sources:
                     normalized_sources.append("traffic_tool")
+            elif source == "transport_tool":
+                if "transport_tool" not in normalized_sources:
+                    normalized_sources.append("transport_tool")
             elif source == "general_agent":
                 if "general_agent" not in normalized_sources:
                     normalized_sources.append("general_agent")
@@ -206,6 +235,8 @@ def select_sources(query: str):
             data["intent"] = "finance"
         elif "traffic_tool" in normalized_sources:
             data["intent"] = "traffic"
+        elif "transport_tool" in normalized_sources:
+            data["intent"] = "transport"
         elif "general_agent" in normalized_sources:
             data["intent"] = "general"
         else:
