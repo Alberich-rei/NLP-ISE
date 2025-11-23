@@ -6,6 +6,7 @@ from .rag_agent import RAGAgent
 from .traffic_agent import TrafficAgent
 from .weather_agent import WeatherAgent
 from .transport_agent import TransportAgent
+from .web_agent import WebAgent
 
 __all__ = [
     "AgentRouter",
@@ -15,5 +16,6 @@ __all__ = [
     "TrafficAgent",
     "WeatherAgent",
     "create_tool_agent",
-    "TransportAgent"
+    "TransportAgent",
+    "WebAgent"
 ]
