@@ -3,17 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motorola Cartoon Beeper</title>
+    <title>Motorola Cartoon Beeper Mechanical</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Patrick+Hand&display=swap" rel="stylesheet">
-    <style>
-        @font-face {
-            font-family: 'zpix';
-            src: url('/static/zpix.ttf') format('truetype');
-            font-display: swap;
-            font-weight: normal;
-            font-style: normal;
-        }
-    </style>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -22,83 +14,91 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* 定义字体变量 */
+        /* 尝试加载本地 zpix 字体 */
+        @font-face {
+            font-family: 'zpix';
+            src: url('/static/zpix.ttf') format('truetype');
+            font-display: swap;
+        }
+
         :root {
             --font-screen: 'zpix', 'VT323', monospace;
             --font-cartoon: 'Patrick Hand', cursive;
-            --color-dark-brown: #4a332d;
-            --color-accent-orange: #ffab40;
-            --color-accent-yellow: #ffd740;
-            --color-bg-cream: #fff8e1;
+            --color-brown: #4a332d;
+            --color-cream: #fff8e1;
+            --color-orange-bg: #fb923c;
+            --color-orange-light: #ffedd5;
+            --color-metal: #78716c; /* 新增金属色 */
         }
 
         body {
             font-family: var(--font-cartoon);
-            color: var(--color-dark-brown);
-            background-color: var(--color-bg-cream);
+            color: var(--color-brown);
+            background-color: var(--color-cream);
+            overflow: hidden;
+            user-select: none;
         }
 
-        /* 自定义滚动条 - 暖色调 */
-        .custom-scrollbar::-webkit-scrollbar { width: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #ffe0b2; border-radius: 5px; border: 2px solid var(--color-dark-brown); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-accent-orange); border-radius: 5px; border: 2px solid var(--color-dark-brown); }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-accent-yellow); }
+        /* 滚动条优化 */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: var(--color-orange-light); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ea580c; border-radius: 4px; }
 
-        /* 卡通硬阴影类 */
-        .cartoon-shadow { box-shadow: 6px 6px 0px 0px var(--color-dark-brown); }
-        .cartoon-shadow-sm { box-shadow: 3px 3px 0px 0px var(--color-dark-brown); }
-        .cartoon-shadow-hover:hover { box-shadow: 8px 8px 0px 0px var(--color-dark-brown); transform: translate(-2px, -2px); }
-        .cartoon-shadow-active:active { box-shadow: 2px 2px 0px 0px var(--color-dark-brown); transform: translate(4px, 4px); }
-
-        /* Notice 动态效果 */
-        @keyframes notice-pulse {
-            0%, 100% { 
-                transform: rotate(-5deg) scale(1);
-                background-color: #ffd740;
-                box-shadow: 3px 3px 0px 0px var(--color-dark-brown);
-            }
-            25% { 
-                transform: rotate(-3deg) scale(1.05);
-                background-color: #ffab40;
-            }
-            50% { 
-                transform: rotate(-7deg) scale(1.1);
-                background-color: #ff8f00;
-                box-shadow: 5px 5px 0px 0px var(--color-dark-brown);
-            }
-            75% { 
-                transform: rotate(-4deg) scale(1.05);
-                background-color: #ffab40;
-            }
-        }
+        /* 阴影效果 */
+        .shadow-hard { box-shadow: 8px 8px 0px 0px var(--color-brown); }
+        .shadow-hard-sm { box-shadow: 4px 4px 0px 0px var(--color-brown); }
         
-        .notice-animated {
-            animation: notice-pulse 2s ease-in-out infinite;
-            transition: all 0.3s ease;
-        }
-        
-        .notice-animated:hover {
-            animation-duration: 0.5s;
-            transform: rotate(-2deg) scale(1.15) !important;
+        /* 屏幕纹理 (加强版) */
+        .crt-screen {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
         }
 
-        /* 屏幕字体特殊处理 */
-        .screen-text { 
-            font-family: var(--font-screen) !important; 
-            font-size: 1.2rem; 
-            font-weight: normal !important;
+        /* 警示条纹纹理 */
+        .hazard-stripe {
+            background-image: repeating-linear-gradient(45deg, #facc15, #facc15 10px, #1c1917 10px, #1c1917 20px);
         }
+
+        /* 螺丝样式 */
+        .screw {
+            width: 16px; height: 16px;
+            background-color: var(--color-metal);
+            border: 2px solid var(--color-brown);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 1px 1px 0px var(--color-brown);
+        }
+        .screw::after { content: ''; width: 80%; height: 2px; background: var(--color-brown); transform: rotate(45deg); }
+        .screw::before { content: ''; position: absolute; width: 80%; height: 2px; background: var(--color-brown); transform: rotate(-45deg); }
+
+        .font-pixel { font-family: var(--font-screen); }
+
+        /* Marked 样式修正 */
+        .markdown-body p { margin-bottom: 0.5em; }
+        .markdown-body ul, .markdown-body ol { padding-left: 1.2em; }
+        .markdown-body code { background: rgba(251, 146, 60, 0.2); padding: 0 4px; border-radius: 2px; font-size: 0.95em;}
+
+        /* NOTICE 动画 */
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg) scale(1); }
+            50% { transform: rotate(3deg) scale(1.1); }
+        }
+        .animate-wiggle { animation: wiggle 2s ease-in-out infinite; }
+        .animate-wiggle:hover { animation-duration: 0.5s; }
+
+        /* 开机文字闪烁 */
+        @keyframes blink { 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
     </style>
 </head>
-<body class="overflow-hidden h-screen selection:bg-orange-200">
-
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        
 
-        // 对接FastAPI后端接口
+        // --- API 交互 ---
         const chatAPI = async (question) => {
             try {
                 const resp = await fetch("/api/chat", {
@@ -107,237 +107,267 @@
                     body: JSON.stringify({ question })
                 });
                 const data = await resp.json();
-                return data.answer || "[SYSTEM] No answer returned.";
+                return data.answer || "BEEP. NO DATA RECEIVED.";
             } catch (e) {
-                return "[SYSTEM] Connection error.";
+                return "ERROR: DISCONNECTED.";
             }
         };
 
+        // --- 组件: 开机画面 ---
+        const BootScreen = ({ onComplete }) => {
+            const [text, setText] = useState("");
+            const fullText = "INITIALIZING SYSTEM... OK\nCHECKING HARDWARE... OK\nLOADING ASSETS... OK\nCONNECTING... DONE";
+            
+            useEffect(() => {
+                let i = 0;
+                const timer = setInterval(() => {
+                    setText(fullText.slice(0, i));
+                    i++;
+                    if (i > fullText.length) {
+                        clearInterval(timer);
+                        setTimeout(onComplete, 800);
+                    }
+                }, 30);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="fixed inset-0 bg-[#fff8e1] flex flex-col items-center justify-center z-[100] text-[#4a332d]">
+                    <div className="mb-8 transform scale-150">
+                         <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
+                            GENIUSO
+                        </h1>
+                    </div>
+                    <div className="w-64 h-4 border-2 border-[#4a332d] p-0.5 rounded mb-4 shadow-hard-sm bg-[#78716c]">
+                        <div className="h-full bg-orange-500 animate-[width_2s_ease-out_forwards]" style={{width: '100%'}}></div>
+                    </div>
+                    <pre className="font-pixel text-lg text-orange-800 text-center whitespace-pre-line leading-tight">
+                        {text}<span className="cursor-blink">_</span>
+                    </pre>
+                </div>
+            );
+        };
+
         const App = () => {
+            const [booted, setBooted] = useState(false);
             const [input, setInput] = useState("");
             const [messages, setMessages] = useState([]);
             const [cards, setCards] = useState([]);
             const [isTyping, setIsTyping] = useState(false);
+            const [sysStatus, setSysStatus] = useState("READY");
+            const [uploading, setUploading] = useState(false);
+            
             const screenRef = useRef(null);
             const [draggingId, setDraggingId] = useState(null);
             const [offset, setOffset] = useState({ x: 0, y: 0 });
-            const [uploading, setUploading] = useState(false);
-            const [uploadMsg, setUploadMsg] = useState("");
-        // 上传文件到 /api/upload
-        const handleUpload = async (e) => {
-            e.preventDefault();
-            const file = e.target.elements.file.files[0];
-            if (!file) return;
-            setUploading(true);
-            setUploadMsg("");
-            const formData = new FormData();
-            formData.append("file", file);
-            try {
-                const resp = await fetch("/api/upload", {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await resp.json();
-                setUploadMsg(data?.msg || "Upload success!");
-            } catch (err) {
-                setUploadMsg("[SYSTEM] Upload failed.");
-            }
-            setUploading(false);
-            e.target.reset();
-        };
-
-        // 清空历史 /api/clear_history
-        const handleClearHistory = async () => {
-            setMessages([]);
-            setCards([]);
-            try {
-                await fetch("/api/clear_history", { method: "POST" });
-            } catch (err) {
-                // ignore
-            }
-        };
 
             useEffect(() => {
                 if (screenRef.current) screenRef.current.scrollTop = screenRef.current.scrollHeight;
             }, [messages]);
 
-            useEffect(() => {
-                if (window.lucide) window.lucide.createIcons();
-            });
+            useEffect(() => { if (window.lucide && booted) window.lucide.createIcons(); }, [booted, cards, messages]);
 
-            // 打字机效果 (速度稍快一点，更活泼)
-            const typeOutMessage = async (text, sender = 'BOT') => {
-                setIsTyping(true);
-                let displayedText = "";
-                const messageId = Date.now();
-                setMessages(prev => [...prev, { id: messageId, text: "", sender }]);
-
-                for (let i = 0; i < text.length; i++) {
-                    displayedText += text[i];
-                    setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, text: displayedText } : msg));
-                    // 稍微加快一点速度
-                    await new Promise(r => setTimeout(r, Math.random() * 20 + 10));
+            const handleUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setUploading(true);
+                setSysStatus("BUSY");
+                const formData = new FormData();
+                formData.append("file", file);
+                try {
+                    const resp = await fetch("/api/upload", { method: "POST", body: formData });
+                    const data = await resp.json();
+                    setMessages(prev => [...prev, { id: Date.now(), text: `[SYS] ${data?.msg || "FILE SENT"}`, sender: 'SYSTEM' }]);
+                } catch (err) {
+                    setMessages(prev => [...prev, { id: Date.now(), text: "[SYS] UPLOAD ERR", sender: 'SYSTEM' }]);
                 }
-                setIsTyping(false);
-                return displayedText;
+                setUploading(false);
+                setTimeout(() => setSysStatus("READY"), 1000);
+                e.target.value = '';
             };
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!input.trim() || isTyping) return;
+                
                 const userText = input;
                 setInput("");
                 setMessages(prev => [...prev, { id: Date.now(), text: `> ${userText}`, sender: 'USER' }]);
+                setSysStatus("THINKING");
+                setIsTyping(true);
 
                 try {
-                    setMessages(prev => [...prev, { id: 'loading', text: "THINKING...", sender: 'SYSTEM' }]);
-                    const result = await chatAPI(userText); 
-                    setMessages(prev => prev.filter(m => m.id !== 'loading'));
-                    const finalText = await typeOutMessage(result, 'BOT');
-                    createCard(finalText);
+                    const result = await chatAPI(userText);
+                    let displayed = "";
+                    const msgId = Date.now();
+                    setMessages(prev => [...prev, { id: msgId, text: "", sender: 'BOT' }]);
+                    
+                    const chars = result.split("");
+                    for (let i = 0; i < chars.length; i++) {
+                        displayed += chars[i];
+                        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, text: displayed } : m));
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+                    createCard(displayed);
                 } catch (error) {
-                    setMessages(prev => [...prev, { id: Date.now(), text: "OOPS: CONNECTION LOST", sender: 'SYSTEM' }]);
+                    setMessages(prev => [...prev, { id: Date.now(), text: "ERR: NET_FAIL", sender: 'SYSTEM' }]);
                 }
+                setIsTyping(false);
+                setSysStatus("READY");
             };
 
             const createCard = (content) => {
                 const id = Date.now();
-                // 让卡片稍微分散一点
-                const randomX = Math.floor(Math.random() * (window.innerWidth - 400)) + 50;
-                const randomY = Math.floor(Math.random() * (window.innerHeight - 400)) + 50;
-                // 随机旋转角度，增加趣味性
-                const rotate = Math.floor(Math.random() * 6) - 3; 
-                setCards(prev => [...prev, { id, content, x: randomX, y: randomY, rotate }]);
+                const randomX = Math.floor(Math.random() * (window.innerWidth - 350)) + 20;
+                const randomY = Math.floor(Math.random() * (window.innerHeight - 350)) + 50;
+                setCards(prev => [...prev, { id, content, x: randomX, y: randomY, rotate: Math.random() * 6 - 3 }]);
             };
 
-            // 拖拽逻辑 (保持不变)
             const handleMouseDown = (e, id) => {
                 const card = cards.find(c => c.id === id);
                 setDraggingId(id);
                 setOffset({ x: e.clientX - card.x, y: e.clientY - card.y });
-                // 拖拽时把卡片提到最上层
                 setCards(prev => [...prev.filter(c => c.id !== id), card]);
             };
-
             const handleMouseMove = (e) => {
                 if (draggingId) {
-                    setCards(prev => prev.map(card => {
-                        if (card.id === draggingId) {
-                            return { ...card, x: e.clientX - offset.x, y: e.clientY - offset.y };
-                        }
-                        return card;
-                    }));
+                    setCards(prev => prev.map(c => c.id === draggingId ? { ...c, x: e.clientX - offset.x, y: e.clientY - offset.y } : c));
                 }
             };
 
+            if (!booted) return <BootScreen onComplete={() => setBooted(true)} />;
+
             return (
-                <div className="min-h-screen relative" onMouseMove={handleMouseMove} onMouseUp={() => setDraggingId(null)}>
-                    {/* 卡通背景图案 (暖色波点) */}
-                    <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#ffab40_3px,transparent_3px)] bg-[size:20px_20px]"></div>
+                <div className="min-h-screen relative w-full h-full" onMouseMove={handleMouseMove} onMouseUp={() => setDraggingId(null)}>
                     
-                    {/* 标题 */}
-                    <div className="absolute top-6 left-6 z-10">
-                        <h1 className="text-5xl font-bold tracking-wide text-orange-600 drop-shadow-[2px_2px_0px_#4a332d]">
-                            GENIUSO <span className="text-2xl bg-yellow-400 border-2 border-orange-800 px-2 rounded-lg inline-block notice-animated cursor-pointer">NOTICE!</span>
-                        </h1>
-                        <p className="text-lg font-bold text-orange-800 opacity-80 mt-1">Turbo Search v.2.0</p>
+                    {/* 背景元素 */}
+                    <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#fb923c_2px,transparent_2px)] bg-[size:24px_24px]"></div>
+
+                    {/* 左上角 Branding */}
+                    <div className="absolute top-8 left-8 z-10 flex flex-col gap-1 pointer-events-none">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
+                                GENIUSO
+                            </h1>
+                            <div className="animate-wiggle bg-yellow-400 text-[#4a332d] border-2 border-[#4a332d] px-3 py-0.5 rounded text-base font-bold shadow-hard-sm rotate-[-5deg]">
+                                NOTICE!
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-orange-800/70 font-pixel tracking-widest pl-1">
+                            Turbo Search v.2.0
+                        </p>
                     </div>
 
-                    {/* 中央打字机区域 */}
-
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] z-50">
+                    {/* --- 主机器 (放大版: w-[720px]) --- */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] z-50">
+                        
                         {/* 机器外壳 */}
-                        <div className="bg-orange-300 border-[6px] border-orange-900 rounded-[3rem] p-8 relative cartoon-shadow">
-                            {/* 顶部装饰螺丝 */}
-                            <div className="absolute top-4 left-4 w-4 h-4 bg-yellow-500 rounded-full border-2 border-orange-900"></div>
-                            <div className="absolute top-4 right-4 w-4 h-4 bg-yellow-500 rounded-full border-2 border-orange-900"></div>
-                            <div className="flex justify-between text-sm font-bold mb-3 text-orange-900 px-2">
-                                <span>📶 SIGNAL: SUPER!</span>
-                                <span>🔋 BAT: 100%</span>
-                            </div>
-                            {/* 显示屏区域 */}
-                            <div className="bg-[#fff3e0] border-4 border-orange-800 rounded-3xl p-5 h-72 overflow-y-auto mb-6 custom-scrollbar screen-text cartoon-shadow-sm relative" ref={screenRef}>
-                                {/* 屏幕反光效果 */}
-                                <div className="absolute top-2 left-2 right-2 h-4 bg-white opacity-30 rounded-full pointer-events-none"></div>
-                                {messages.map((msg, idx) => (
-                                    <div key={msg.id} className={`mb-3 screen-text ${msg.sender === 'USER' ? 'text-orange-700' : 'text-orange-950'}`}>
-                                        {msg.sender === 'BOT'
-                                            ? <span
-                                                className="screen-text"
-                                                dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}
-                                              />
-                                            : msg.text
-                                        }
-                                        {isTyping && idx === messages.length - 1 && <span className="animate-bounce inline-block w-3 h-5 bg-orange-600 ml-1 align-middle rounded-sm"></span>}
+                        <div className="bg-[#fb923c] border-[6px] border-[#4a332d] rounded-[40px] p-6 shadow-hard relative flex flex-col gap-5">
+                            
+                            {/* 屏幕区域 (增加机械装饰) */}
+                            <div className="relative">
+                                {/* 顶部状态栏 + 电源灯 */}
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                                    <div className="bg-[#4a332d] text-orange-300 px-4 py-1 rounded-b-lg text-sm font-pixel tracking-wider border-b-2 border-r-2 border-l-2 border-[#292524]">
+                                        SYS: {sysStatus}
                                     </div>
-                                ))}
-                            </div>
-                            {/* 输入区和按钮区（按钮在输入框下方） */}
-                            <div className="bg-orange-400 p-3 rounded-2xl border-4 border-orange-800 cartoon-shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-3xl font-bold text-orange-900 pl-2 screen-text">{">"}</span>
-                                    <form onSubmit={handleSubmit} className="flex-1 flex items-center">
-                                        <input
-                                            type="text"
-                                            value={input}
-                                            onChange={(e) => setInput(e.target.value)}
-                                            className="flex-1 bg-orange-100 border-b-4 border-orange-800 outline-none text-2xl p-2 rounded-lg placeholder-orange-400 font-bold transition-all focus:bg-white screen-text"
-                                            placeholder="Type something fun..."
-                                            disabled={isTyping}
-                                            autoFocus
-                                        />
-                                        <button type="submit" 
-                                            className={`bg-yellow-400 text-orange-950 text-xl px-6 py-3 font-bold rounded-xl border-4 border-orange-800 transition-all flex items-center justify-center ml-2
-                                            ${isTyping ? 'opacity-50 cursor-not-allowed' : 'cartoon-shadow-hover cartoon-shadow-active'}`}
-                                            disabled={isTyping}>
-                                            <i data-lucide="send" className="w-6 h-6 stroke-[3px]"></i>
-                                        </button>
-                                    </form>
+                                    <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-[#4a332d] shadow-[0_0_5px_#22c55e] animate-pulse"></div>
                                 </div>
-                                <div className="flex gap-3 mt-4 justify-end">
-                                    {/* 上传按钮（单独form） */}
-                                    <form onSubmit={handleUpload} className="relative">
-                                        <label className="bg-yellow-400 text-orange-950 text-xl px-4 py-2 font-bold rounded-xl border-4 border-orange-800 cartoon-shadow-hover cartoon-shadow-active cursor-pointer flex items-center gap-1 screen-text">
-                                            <i data-lucide="upload" className="w-5 h-5"></i>
-                                            <input type="file" name="file" className="hidden" accept=".txt,.pdf,.doc,.docx" disabled={uploading} onChange={e => e.target.form && e.target.form.dispatchEvent(new Event('submit', { cancelable: true }))} />
-                                            Upload
-                                        </label>
-                                        {uploadMsg && <span className="absolute left-0 top-full mt-1 text-orange-700 text-sm font-bold screen-text">{uploadMsg}</span>}
-                                    </form>
-                                    {/* 清空历史按钮 */}
-                                    <button type="button"
-                                        className="bg-orange-200 text-orange-900 text-xl px-4 py-2 font-bold rounded-xl border-4 border-orange-800 cartoon-shadow-hover cartoon-shadow-active screen-text"
-                                        onClick={handleClearHistory}
-                                    >
-                                        <i data-lucide="eraser" className="w-5 h-5 mr-1"></i>Clear
+
+                                {/* 屏幕边框容器 (深色金属感) */}
+                                <div className="bg-[#292524] border-[4px] border-[#4a332d] rounded-2xl p-1.5 shadow-inner relative">
+                                    
+                                    {/* 机械装饰：四角螺丝 */}
+                                    <div className="screw absolute -top-3 -left-3"></div>
+                                    <div className="screw absolute -top-3 -right-3"></div>
+                                    <div className="screw absolute -bottom-3 -left-3"></div>
+                                    <div className="screw absolute -bottom-3 -right-3"></div>
+
+                                    {/* 机械装饰：右侧散热格栅 */}
+                                    <div className="absolute right-2 top-1/2 -translate-x-1/2 flex flex-col gap-1.5 pointer-events-none opacity-70">
+                                        {[...Array(6)].map((_,i) => <div key={i} className="w-1.5 h-5 bg-[#0c0a09] border-r border-b border-[#57534e] rounded-sm"></div>)}
+                                    </div>
+
+                                    {/* 屏幕本体 (高度增加: h-72) */}
+                                    <div className="bg-[#fff7ed] h-72 rounded-xl p-4 overflow-y-auto custom-scrollbar font-pixel text-xl leading-relaxed crt-screen relative mx-1" ref={screenRef}>
+                                        {messages.map((msg, idx) => (
+                                            <div key={msg.id} className={`mb-3 ${msg.sender === 'USER' ? 'text-orange-600 text-right' : 'text-[#4a332d] text-left'}`}>
+                                                <span className={msg.sender === 'BOT' ? 'markdown-body' : 'font-bold'}
+                                                    dangerouslySetInnerHTML={{ __html: msg.sender === 'BOT' ? marked.parse(msg.text) : msg.text }}>
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 机械装饰：底部警示条纹 */}
+                                    <div className="h-4 w-full hazard-stripe border-t-4 border-[#4a332d] mt-1.5 rounded-b-md opacity-90"></div>
+                                </div>
+                            </div>
+
+                            {/* 控制面板 (放大) */}
+                            <div className="bg-[#fdba74] rounded-2xl border-[4px] border-[#4a332d] p-4 flex gap-4 shadow-hard-sm">
+                                
+                                {/* 输入框 (高度增加: h-14) */}
+                                <form onSubmit={handleSubmit} className="flex-1 bg-[#fff7ed] border-[4px] border-[#4a332d] rounded-xl flex items-center px-3 shadow-inner relative">
+                                    <div className="screw absolute -left-2 top-1/2 -translate-y-1/2 scale-75"></div>
+                                    <span className="text-2xl font-pixel text-orange-400 mr-2 animate-pulse pl-4">{">"}</span>
+                                    <input 
+                                        type="text" 
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        className="w-full bg-transparent border-none outline-none font-pixel text-2xl text-[#4a332d] h-14"
+                                        placeholder="INPUT COMMAND..."
+                                        disabled={isTyping}
+                                        autoFocus
+                                    />
+                                </form>
+
+                                {/* 按钮组 (尺寸增加: w-14 h-14) */}
+                                <div className="flex gap-3 shrink-0 relative">
+                                    <div className="screw absolute -right-2 top-1/2 -translate-y-1/2 scale-75 z-10"></div>
+                                    {/* Send */}
+                                    <button type="submit" onClick={handleSubmit} disabled={isTyping}
+                                        className="w-14 h-14 bg-[#86efac] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#4ade80]">
+                                        <i data-lucide="send" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
+                                    </button>
+                                    {/* Upload */}
+                                    <label className="w-14 h-14 bg-[#93c5fd] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center cursor-pointer hover:bg-[#60a5fa]">
+                                        <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+                                        {uploading ? <i data-lucide="loader" className="w-7 h-7 animate-spin text-[#4a332d]"></i> : <i data-lucide="paperclip" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>}
+                                    </label>
+                                    {/* Clear */}
+                                    <button type="button" onClick={() => {setMessages([]); setCards([]);}} 
+                                        className="w-14 h-14 bg-[#fca5a5] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#f87171]">
+                                        <i data-lucide="trash" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
                                     </button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
 
-                    {/* 拖拽卡片层 */}
+                    {/* --- 生成的卡片 (尺寸加大) --- */}
                     {cards.map((card) => (
                         <div
                             key={card.id}
-                            className="absolute w-72 bg-[#fffbf0] text-orange-950 p-4 cursor-grab active:cursor-grabbing transition-transform border-[5px] border-orange-900 rounded-2xl cartoon-shadow"
+                            className="absolute w-80 bg-white border-[4px] border-[#4a332d] rounded-lg cursor-grab active:cursor-grabbing shadow-hard animate-[pop_0.3s_ease-out]"
                             style={{ 
                                 left: card.x, 
                                 top: card.y,
                                 transform: `rotate(${card.rotate}deg) scale(${draggingId === card.id ? 1.05 : 1})`,
-                                zIndex: draggingId === card.id ? 100 : 1
+                                zIndex: draggingId === card.id ? 100 : 10
                             }}
                             onMouseDown={(e) => handleMouseDown(e, card.id)}
                         >
-                             {/* 卡片顶部的胶带效果 */}
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-yellow-200/80 border-2 border-yellow-600/50 rotate-2"></div>
-
-                            <div className="border-b-4 border-orange-200 pb-2 mb-3 flex justify-between text-sm font-bold text-orange-700 uppercase">
-                                <span>📄 TICKET #{card.id.toString().slice(-4)}</span>
-                                <i data-lucide="grab" className="w-5 h-5 opacity-50"></i>
+                            {/* 票据装饰线 */}
+                            <div className="border-b-[3px] border-dashed border-[#4a332d] p-1.5 bg-yellow-50 rounded-t-lg flex justify-between items-center">
+                                <div className="flex gap-1">{[...Array(5)].map((_,i)=><div key={i} className="w-1.5 h-1.5 rounded-full bg-[#4a332d]/30"></div>)}</div>
                             </div>
-                            <div className="text-xl leading-snug font-bold whitespace-pre-wrap screen-text"
+                            <div className="p-4 font-pixel text-[#4a332d] text-lg leading-snug markdown-body" 
                                 dangerouslySetInnerHTML={{ __html: marked.parse(card.content) }}>
+                            </div>
+                            <div className="bg-gray-100 p-1.5 border-t-[3px] border-[#4a332d] text-xs text-center font-bold text-gray-400 rounded-b-lg">
+                                OUTPUT RECORD #{card.id.toString().slice(-4)}
                             </div>
                         </div>
                     ))}
