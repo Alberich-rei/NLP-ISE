@@ -57,7 +57,7 @@ class AgentRouter:
         elif intent == "traffic":
             result = self.traffic_agent.run(user_query, enhanced_query)
         elif intent == "transport":
-            result = self.transport_agent.run(user_query, enhanced_query)
+            result = self.transport_agent.run(enhanced_query)
         elif intent == "web":
             result = self.web_agent.run(enhanced_query)
         elif intent == "rag":
