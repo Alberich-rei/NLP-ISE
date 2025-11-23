@@ -154,13 +154,13 @@ class TransportAgent:
     # ----------------------------------------------------------------
     # 主执行入口
     # ----------------------------------------------------------------
-    def run(self, question: str):
-        location, poi, need_route, has_nearest, route_type = self.parse(question)
+    def run(self, user_query: str, question: str):
+        location, poi, need_route, has_nearest, route_type = self.parse(user_query)
 
         if not location:
             # return "I could not detect your current location."
             error_text = f"I could not detect your current location."
-            return self._call_llm(self.build_prompt(question, error_text))
+            return self._call_llm(self.build_prompt(user_query, error_text))
 
         # 1) 地理编码
         start = self.tools.geocode(location)
@@ -251,7 +251,7 @@ class TransportAgent:
         Please check if the location name is correct, or provide more details (e.g., "Starbucks Coffee, Shanghai").
                 """.strip()
 
-            return self._call_llm(self.build_prompt(question, poi_text))
+            return self._call_llm(self.build_prompt(user_query, poi_text))
 
 
         # -------------------------------
@@ -282,7 +282,7 @@ class TransportAgent:
 
         To plan your route accurately, please specify which one you want to go to (e.g., "I want to go to {keyword_poi_objs[0]['name']}").
                 """.strip()
-                return self._call_llm(self.build_prompt(question, route_text))
+                return self._call_llm(self.build_prompt(user_query, route_text))
 
         # 场景3：所有搜索都未找到POI
         else:
@@ -293,7 +293,7 @@ class TransportAgent:
 
         Please verify the location name or provide a more detailed address (e.g., "McDonald's, Beijing Chaoyang District").
             """.strip()
-            return self._call_llm(self.build_prompt(question, route_text))
+            return self._call_llm(self.build_prompt(user_query, route_text))
 
         # -------------------------------
         # 执行路线规划（仅当确定目标POI后）
@@ -302,14 +302,14 @@ class TransportAgent:
             # 校验POI经纬度有效性
             if nearest_poi['lon'] == 0.0 or nearest_poi['lat'] == 0.0:
                 route_text = f"Sorry, we couldn't get the coordinates of {nearest_poi['name']}, so route planning failed."
-                return self._call_llm(self.build_prompt(question, route_text))
+                return self._call_llm(self.build_prompt(user_query, route_text))
 
         end = [nearest_poi["lon"], nearest_poi["lat"]]
         route = self.tools.get_route(start, end, route_type=route_type)  # 传入路线类型
 
         if not route:
             error_text = f"Route calculation failed."
-            return self._call_llm(self.build_prompt(question, error_text))
+            return self._call_llm(self.build_prompt(user_query, error_text))
             # return "Route calculation failed."
 
         # 映射路线类型为中文（提升可读性）
@@ -342,7 +342,7 @@ class TransportAgent:
         💡 提示：路线为实时规划，实际耗时可能受交通/路况影响
         """.strip()
 
-        return self._call_llm(self.build_prompt(question, text))
+        return self._call_llm(self.build_prompt(user_query, text))
 
     # ----------------------------------------------------------------
     # LLM Prompt 构建（适配多POI列表输出）
