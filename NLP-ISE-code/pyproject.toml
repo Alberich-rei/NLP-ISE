@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "easyocr>=1.7.2",
+    "fastapi>=0.121.3",
+    "google>=3.0.0",
+    "google-cloud-vision>=3.11.0",
+    "pypdf>=6.3.0",
+]

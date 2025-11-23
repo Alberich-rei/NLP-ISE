@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motorola Cartoon Beeper Mechanical</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Patrick+Hand&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        /* 尝试加载本地 zpix 字体 */
+        @font-face {
+            font-family: 'zpix';
+            src: url('/static/zpix.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        :root {
+            --font-screen: 'zpix', 'VT323', monospace;
+            --font-cartoon: 'Patrick Hand', cursive;
+            --color-brown: #4a332d;
+            --color-cream: #fff8e1;
+            --color-orange-bg: #fb923c;
+            --color-orange-light: #ffedd5;
+            --color-metal: #78716c; /* 新增金属色 */
+        }
+
+        body {
+            font-family: var(--font-cartoon);
+            color: var(--color-brown);
+            background-color: var(--color-cream);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 滚动条优化 */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: var(--color-orange-light); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ea580c; border-radius: 4px; }
+
+        /* 阴影效果 */
+        .shadow-hard { box-shadow: 8px 8px 0px 0px var(--color-brown); }
+        .shadow-hard-sm { box-shadow: 4px 4px 0px 0px var(--color-brown); }
+        
+        /* 屏幕纹理 (加强版) */
+        .crt-screen {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 警示条纹纹理 */
+        .hazard-stripe {
+            background-image: repeating-linear-gradient(45deg, #facc15, #facc15 10px, #1c1917 10px, #1c1917 20px);
+        }
+
+        /* 螺丝样式 */
+        .screw {
+            width: 16px; height: 16px;
+            background-color: var(--color-metal);
+            border: 2px solid var(--color-brown);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 1px 1px 0px var(--color-brown);
+        }
+        .screw::after { content: ''; width: 80%; height: 2px; background: var(--color-brown); transform: rotate(45deg); }
+        .screw::before { content: ''; position: absolute; width: 80%; height: 2px; background: var(--color-brown); transform: rotate(-45deg); }
+
+        .font-pixel { font-family: var(--font-screen); }
+
+        /* Marked 样式修正 */
+        .markdown-body p { margin-bottom: 0.5em; }
+        .markdown-body ul, .markdown-body ol { padding-left: 1.2em; }
+        .markdown-body code { background: rgba(251, 146, 60, 0.2); padding: 0 4px; border-radius: 2px; font-size: 0.95em;}
+
+        /* NOTICE 动画 */
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg) scale(1); }
+            50% { transform: rotate(3deg) scale(1.1); }
+        }
+        .animate-wiggle { animation: wiggle 2s ease-in-out infinite; }
+        .animate-wiggle:hover { animation-duration: 0.5s; }
+
+        /* 开机文字闪烁 */
+        @keyframes blink { 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- API 交互 ---
+        const chatAPI = async (question) => {
+            try {
+                const resp = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question })
+                });
+                const data = await resp.json();
+                return data.answer || "BEEP. NO DATA RECEIVED.";
+            } catch (e) {
+                return "ERROR: DISCONNECTED.";
+            }
+        };
+
+        // --- 组件: 开机画面 ---
+        const BootScreen = ({ onComplete }) => {
+            const [text, setText] = useState("");
+            const fullText = "INITIALIZING SYSTEM... OK\nCHECKING HARDWARE... OK\nLOADING ASSETS... OK\nCONNECTING... DONE";
+            
+            useEffect(() => {
+                let i = 0;
+                const timer = setInterval(() => {
+                    setText(fullText.slice(0, i));
+                    i++;
+                    if (i > fullText.length) {
+                        clearInterval(timer);
+                        setTimeout(onComplete, 800);
+                    }
+                }, 30);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="fixed inset-0 bg-[#fff8e1] flex flex-col items-center justify-center z-[100] text-[#4a332d]">
+                    <div className="mb-8 transform scale-150">
+                         <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
+                            GENIUSO
+                        </h1>
+                    </div>
+                    <div className="w-64 h-4 border-2 border-[#4a332d] p-0.5 rounded mb-4 shadow-hard-sm bg-[#78716c]">
+                        <div className="h-full bg-orange-500 animate-[width_2s_ease-out_forwards]" style={{width: '100%'}}></div>
+                    </div>
+                    <pre className="font-pixel text-lg text-orange-800 text-center whitespace-pre-line leading-tight">
+                        {text}<span className="cursor-blink">_</span>
+                    </pre>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [booted, setBooted] = useState(false);
+            const [input, setInput] = useState("");
+            const [messages, setMessages] = useState([]);
+            const [cards, setCards] = useState([]);
+            const [isTyping, setIsTyping] = useState(false);
+            const [sysStatus, setSysStatus] = useState("READY");
+            const [uploading, setUploading] = useState(false);
+            
+            const screenRef = useRef(null);
+            const [draggingId, setDraggingId] = useState(null);
+            const [offset, setOffset] = useState({ x: 0, y: 0 });
+
+            useEffect(() => {
+                if (screenRef.current) screenRef.current.scrollTop = screenRef.current.scrollHeight;
+            }, [messages]);
+
+            useEffect(() => { if (window.lucide && booted) window.lucide.createIcons(); }, [booted, cards, messages]);
+
+            const handleUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setUploading(true);
+                setSysStatus("BUSY");
+                const formData = new FormData();
+                formData.append("file", file);
+                try {
+                    const resp = await fetch("/api/upload", { method: "POST", body: formData });
+                    const data = await resp.json();
+                    setMessages(prev => [...prev, { id: Date.now(), text: `[SYS] ${data?.msg || "FILE SENT"}`, sender: 'SYSTEM' }]);
+                } catch (err) {
+                    setMessages(prev => [...prev, { id: Date.now(), text: "[SYS] UPLOAD ERR", sender: 'SYSTEM' }]);
+                }
+                setUploading(false);
+                setTimeout(() => setSysStatus("READY"), 1000);
+                e.target.value = '';
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!input.trim() || isTyping) return;
+                
+                const userText = input;
+                setInput("");
+                setMessages(prev => [...prev, { id: Date.now(), text: `> ${userText}`, sender: 'USER' }]);
+                setSysStatus("THINKING");
+                setIsTyping(true);
+
+                try {
+                    const result = await chatAPI(userText);
+                    let displayed = "";
+                    const msgId = Date.now();
+                    setMessages(prev => [...prev, { id: msgId, text: "", sender: 'BOT' }]);
+                    
+                    const chars = result.split("");
+                    for (let i = 0; i < chars.length; i++) {
+                        displayed += chars[i];
+                        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, text: displayed } : m));
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+                    createCard(displayed);
+                } catch (error) {
+                    setMessages(prev => [...prev, { id: Date.now(), text: "ERR: NET_FAIL", sender: 'SYSTEM' }]);
+                }
+                setIsTyping(false);
+                setSysStatus("READY");
+            };
+
+            const createCard = (content) => {
+                const id = Date.now();
+                const randomX = Math.floor(Math.random() * (window.innerWidth - 350)) + 20;
+                const randomY = Math.floor(Math.random() * (window.innerHeight - 350)) + 50;
+                setCards(prev => [...prev, { id, content, x: randomX, y: randomY, rotate: Math.random() * 6 - 3 }]);
+            };
+
+            const handleMouseDown = (e, id) => {
+                const card = cards.find(c => c.id === id);
+                setDraggingId(id);
+                setOffset({ x: e.clientX - card.x, y: e.clientY - card.y });
+                setCards(prev => [...prev.filter(c => c.id !== id), card]);
+            };
+            const handleMouseMove = (e) => {
+                if (draggingId) {
+                    setCards(prev => prev.map(c => c.id === draggingId ? { ...c, x: e.clientX - offset.x, y: e.clientY - offset.y } : c));
+                }
+            };
+
+            if (!booted) return <BootScreen onComplete={() => setBooted(true)} />;
+
+            return (
+                <div className="min-h-screen relative w-full h-full" onMouseMove={handleMouseMove} onMouseUp={() => setDraggingId(null)}>
+                    
+                    {/* 背景元素 */}
+                    <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#fb923c_2px,transparent_2px)] bg-[size:24px_24px]"></div>
+
+                    {/* 左上角 Branding */}
+                    <div className="absolute top-8 left-8 z-10 flex flex-col gap-1 pointer-events-none">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
+                                GENIUSO
+                            </h1>
+                            <div className="animate-wiggle bg-yellow-400 text-[#4a332d] border-2 border-[#4a332d] px-3 py-0.5 rounded text-base font-bold shadow-hard-sm rotate-[-5deg]">
+                                NOTICE!
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-orange-800/70 font-pixel tracking-widest pl-1">
+                            Turbo Search v.2.0
+                        </p>
+                    </div>
+
+                    {/* --- 主机器 (放大版: w-[720px]) --- */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] z-50">
+                        
+                        {/* 机器外壳 */}
+                        <div className="bg-[#fb923c] border-[6px] border-[#4a332d] rounded-[40px] p-6 shadow-hard relative flex flex-col gap-5">
+                            
+                            {/* 屏幕区域 (增加机械装饰) */}
+                            <div className="relative">
+                                {/* 顶部状态栏 + 电源灯 */}
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                                    <div className="bg-[#4a332d] text-orange-300 px-4 py-1 rounded-b-lg text-sm font-pixel tracking-wider border-b-2 border-r-2 border-l-2 border-[#292524]">
+                                        SYS: {sysStatus}
+                                    </div>
+                                    <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-[#4a332d] shadow-[0_0_5px_#22c55e] animate-pulse"></div>
+                                </div>
+
+                                {/* 屏幕边框容器 (深色金属感) */}
+                                <div className="bg-[#292524] border-[4px] border-[#4a332d] rounded-2xl p-1.5 shadow-inner relative">
+                                    
+                                    {/* 机械装饰：四角螺丝 */}
+                                    <div className="screw absolute -top-3 -left-3"></div>
+                                    <div className="screw absolute -top-3 -right-3"></div>
+                                    <div className="screw absolute -bottom-3 -left-3"></div>
+                                    <div className="screw absolute -bottom-3 -right-3"></div>
+
+                                    {/* 机械装饰：右侧散热格栅 */}
+                                    <div className="absolute right-2 top-1/2 -translate-x-1/2 flex flex-col gap-1.5 pointer-events-none opacity-70">
+                                        {[...Array(6)].map((_,i) => <div key={i} className="w-1.5 h-5 bg-[#0c0a09] border-r border-b border-[#57534e] rounded-sm"></div>)}
+                                    </div>
+
+                                    {/* 屏幕本体 (高度增加: h-72) */}
+                                    <div className="bg-[#fff7ed] h-72 rounded-xl p-4 overflow-y-auto custom-scrollbar font-pixel text-xl leading-relaxed crt-screen relative mx-1" ref={screenRef}>
+                                        {messages.map((msg, idx) => (
+                                            <div key={msg.id} className={`mb-3 ${msg.sender === 'USER' ? 'text-orange-600 text-right' : 'text-[#4a332d] text-left'}`}>
+                                                <span className={msg.sender === 'BOT' ? 'markdown-body' : 'font-bold'}
+                                                    dangerouslySetInnerHTML={{ __html: msg.sender === 'BOT' ? marked.parse(msg.text) : msg.text }}>
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 机械装饰：底部警示条纹 */}
+                                    <div className="h-4 w-full hazard-stripe border-t-4 border-[#4a332d] mt-1.5 rounded-b-md opacity-90"></div>
+                                </div>
+                            </div>
+
+                            {/* 控制面板 (放大) */}
+                            <div className="bg-[#fdba74] rounded-2xl border-[4px] border-[#4a332d] p-4 flex gap-4 shadow-hard-sm">
+                                
+                                {/* 输入框 (高度增加: h-14) */}
+                                <form onSubmit={handleSubmit} className="flex-1 bg-[#fff7ed] border-[4px] border-[#4a332d] rounded-xl flex items-center px-3 shadow-inner relative">
+                                    <div className="screw absolute -left-2 top-1/2 -translate-y-1/2 scale-75"></div>
+                                    <span className="text-2xl font-pixel text-orange-400 mr-2 animate-pulse pl-4">{">"}</span>
+                                    <input 
+                                        type="text" 
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        className="w-full bg-transparent border-none outline-none font-pixel text-2xl text-[#4a332d] h-14"
+                                        placeholder="INPUT COMMAND..."
+                                        disabled={isTyping}
+                                        autoFocus
+                                    />
+                                </form>
+
+                                {/* 按钮组 (尺寸增加: w-14 h-14) */}
+                                <div className="flex gap-3 shrink-0 relative">
+                                    <div className="screw absolute -right-2 top-1/2 -translate-y-1/2 scale-75 z-10"></div>
+                                    {/* Send */}
+                                    <button type="submit" onClick={handleSubmit} disabled={isTyping}
+                                        className="w-14 h-14 bg-[#86efac] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#4ade80]">
+                                        <i data-lucide="send" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
+                                    </button>
+                                    {/* Upload */}
+                                    <label className="w-14 h-14 bg-[#93c5fd] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center cursor-pointer hover:bg-[#60a5fa]">
+                                        <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+                                        {uploading ? <i data-lucide="loader" className="w-7 h-7 animate-spin text-[#4a332d]"></i> : <i data-lucide="paperclip" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>}
+                                    </label>
+                                    {/* Clear */}
+                                    <button type="button" onClick={() => {setMessages([]); setCards([]);}} 
+                                        className="w-14 h-14 bg-[#fca5a5] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#f87171]">
+                                        <i data-lucide="trash" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    {/* --- 生成的卡片 (尺寸加大) --- */}
+                    {cards.map((card) => (
+                        <div
+                            key={card.id}
+                            className="absolute w-80 bg-white border-[4px] border-[#4a332d] rounded-lg cursor-grab active:cursor-grabbing shadow-hard animate-[pop_0.3s_ease-out]"
+                            style={{ 
+                                left: card.x, 
+                                top: card.y,
+                                transform: `rotate(${card.rotate}deg) scale(${draggingId === card.id ? 1.05 : 1})`,
+                                zIndex: draggingId === card.id ? 100 : 10
+                            }}
+                            onMouseDown={(e) => handleMouseDown(e, card.id)}
+                        >
+                            {/* 票据装饰线 */}
+                            <div className="border-b-[3px] border-dashed border-[#4a332d] p-1.5 bg-yellow-50 rounded-t-lg flex justify-between items-center">
+                                <div className="flex gap-1">{[...Array(5)].map((_,i)=><div key={i} className="w-1.5 h-1.5 rounded-full bg-[#4a332d]/30"></div>)}</div>
+                            </div>
+                            <div className="p-4 font-pixel text-[#4a332d] text-lg leading-snug markdown-body" 
+                                dangerouslySetInnerHTML={{ __html: marked.parse(card.content) }}>
+                            </div>
+                            <div className="bg-gray-100 p-1.5 border-t-[3px] border-[#4a332d] text-xs text-center font-bold text-gray-400 rounded-b-lg">
+                                OUTPUT RECORD #{card.id.toString().slice(-4)}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

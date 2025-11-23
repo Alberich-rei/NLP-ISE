@@ -114,6 +114,15 @@ ACTION_KEYWORDS = ["我要去", "我想去", "想去", "要去", "找", "查找"
                 "want to go to", "go to", "find", "look for", "nearby", "around", "route to", "navigate to",
                    "drive to", "walk to", "cycle to", "nearest", "cloest"]
 
+#联网搜索
+WEB_KEYWORDS =["联网","网上","网络","社交媒体","浏览器",
+                    "internet","social media","web"] 
+
+# 添加新的关键词列表(个人信息或者相关词语触发)
+RAG_KEYWORDS = [
+    "数据库", "database", "文档搜索", "document search", 
+    "数据库查询", "search in database","my family","我家","my home","my house","个人信息","personal information"
+]
 
 def _contains_any(text: str, keywords) -> bool:
     return any(keyword in text for keyword in keywords)
@@ -146,11 +155,13 @@ def select_sources(query: str):
     lowered = cleaned.lower()
 
     if not cleaned:
-        return {"intent": "rag", "sources": ["local_rag"]}
+        return {"intent": "general", "sources": ["general_agent"]}
 
     # 检查是否为一般性对话（优先级最高）
     if _contains_any(lowered, GENERAL_KEYWORDS) or _contains_any(cleaned, GENERAL_KEYWORDS):
         # 但如果同时包含专业领域关键词，则按专业领域处理
+        has_rag = _contains_any(lowered, RAG_KEYWORDS) or _contains_any(cleaned, RAG_KEYWORDS)
+        has_web = _contains_any(lowered, WEB_KEYWORDS) or _contains_any(cleaned, WEB_KEYWORDS)
         has_weather = _contains_any(lowered, WEATHER_KEYWORDS) or _contains_any(cleaned, WEATHER_KEYWORDS)
         has_finance = _contains_any(lowered, FINANCE_KEYWORDS)
         has_traffic = _contains_any(lowered, TRAFFIC_KEYWORDS) or _contains_any(cleaned, TRAFFIC_KEYWORDS)
@@ -158,7 +169,7 @@ def select_sources(query: str):
         has_poi = _contains_any(lowered, ACTION_KEYWORDS)
         has_nav = _contains_any(lowered, NAVIGATION_MARKERS)
         
-        if not (has_weather or has_finance or has_traffic or has_location or has_poi or has_nav):
+        if not (has_weather or has_finance or has_traffic or has_location or has_poi or has_nav or has_rag or has_web):
             return {"intent": "general", "sources": ["general_agent"]}
 
     if _contains_any(lowered, WEATHER_KEYWORDS) or _contains_any(cleaned, WEATHER_KEYWORDS):
@@ -184,6 +195,12 @@ def select_sources(query: str):
 
     if _contains_any(lowered, LOCATION_MARKERS) and _contains_any(lowered, NAVIGATION_MARKERS):
         return {"intent": "transport", "sources": ["transport_tool"]}
+    
+    if _contains_any(lowered, WEB_KEYWORDS) :#联网
+        return {"intent": "web", "sources": ["web_tool"]}
+    
+    if _contains_any(lowered, RAG_KEYWORDS) :#rag
+        return {"intent": "rag", "sources": ["local_rag"]}
 
     prompt = (
         "You are a routing classifier. Respond with JSON only, e.g. {\"intent\":\"rag\",\"sources\":[\"local_rag\"]}. "
@@ -219,6 +236,9 @@ def select_sources(query: str):
             elif source == "general_agent":
                 if "general_agent" not in normalized_sources:
                     normalized_sources.append("general_agent")
+            elif source == "web_tool":
+                if "web_tool" not in normalized_sources:
+                    normalized_sources.append("web_tool")
             elif source == "local_rag":
                 if "local_rag" not in normalized_sources:
                     normalized_sources.append("local_rag")
@@ -227,7 +247,7 @@ def select_sources(query: str):
             normalized_sources = ["local_rag"]
 
         if "intent" not in data:
-            data["intent"] = "rag"
+            data["intent"] = "gernral"
 
         if "weather_tool" in normalized_sources:
             data["intent"] = "weather"
@@ -239,11 +259,18 @@ def select_sources(query: str):
             data["intent"] = "transport"
         elif "general_agent" in normalized_sources:
             data["intent"] = "general"
-        else:
-            normalized_sources = ["local_rag"]
+        elif "web_tool" in normalized_sources:
+            data["intent"] = "web"
+        elif "local_rag" in normalized_sources:
             data["intent"] = "rag"
+        else:
+            normalized_sources = ["local_rag"]#?
+            data["intent"] = "general"
+         # 默认将意图设置为 general
+        if data["intent"] not in ["weather", "finance", "traffic", "transport", "general", "web", "rag"]:
+            data["intent"] = "general"
 
         data["sources"] = normalized_sources
         return data
     except Exception:
-        return {"intent": "rag", "sources": ["local_rag"]}
+        return {"intent": "general", "sources": ["general_agent"]}

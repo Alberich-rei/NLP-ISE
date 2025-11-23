@@ -1,64 +1,55 @@
 """Utility helpers for translating text via the configured LLM."""
+
 from __future__ import annotations
+import config.config as config
+import requests
 
-from typing import Callable
+class TranslateModel:
+    def __init__(self):
+        self.base_url = config.DEEPSEEK_V3_BASE_URL
+        self.api_key = config.DEEPSEEK_V3_API_KEY
+        self.model_id = config.DEEPSEEK_V3_MODEL
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
 
-LLMCallable = Callable[[str], str]
-
-
-def _safe_call(llm: LLMCallable, prompt: str) -> str:
-    try:
-        return llm(prompt).strip()
-    except Exception as exc:  # noqa: BLE001 - we want to surface clean fallback
-        return f"Translation error: {exc}"
-
-
-def translate_to_english(llm: LLMCallable, text: str, source_language: str) -> str:
-    """Translate an arbitrary language into English using the LLM."""
-    if not text.strip():
-        return text
-
-    language = source_language.lower()
-    if language == "english":
-        return text
-
-    language_label = {
-        "cantonese": "Cantonese Chinese",
-        "chinese": "Chinese",
-    }.get(language, source_language)
-
-    prompt = (
-        "You are a precise translator. Translate the following {src} text into natural English. "
-        "Return only the translated text without extra commentary.\n\n{text}"
-    ).format(src=language_label, text=text)
-    result = _safe_call(llm, prompt)
-    return result if result else text
-
-
-def translate_from_english(llm: LLMCallable, text: str, target_language: str) -> str:
-    """Translate English text into the configured target language."""
-    if not text.strip():
-        return text
-
-    language = target_language.lower()
-    if language == "english":
-        return text
-
-    if language == "cantonese":
+    def translate_text(self, text: str, source_language: str, target_language: str) -> str:
+        """
+        Use LLM to translate text from source_language to target_language.
+        If source and target are相同, return原文.
+        """
         prompt = (
-            "Translate the following English text into written Cantonese using Traditional Chinese characters. "
-            "Use colloquial Cantonese expressions where appropriate. Return only the translated text."\
+            f"You are a professional translator. Translate the following text from {source_language} to {target_language}. "
+            f"Return only the translated text without any explanation or extra commentary.\n\n{text}"
         )
-    elif language == "chinese":
-        prompt = (
-            "Translate the following English text into Simplified Chinese suitable for Mainland readers. "
-            "Return only the translated text."
-        )
-    else:
-        prompt = (
-            "Translate the following English text into {lang}. Return only the translated text.".format(lang=target_language)
-        )
+        endpoint = f"{self.base_url}/chat/completions"
+        
+        if not text.strip():
+            return text
 
-    prompt = f"{prompt}\n\n{text}"
-    result = _safe_call(llm, prompt)
-    return result if result else text
+        src = source_language.strip().lower()
+        tgt = target_language.strip().lower()
+        if src == tgt:
+            return text
+
+        payload = {
+            "model": self.model_id,
+            "messages": [
+                {"role":"system","content":prompt},
+                {"role":"user","content":text}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7,
+        }
+        
+        try:
+            r = requests.post(endpoint, headers=self.headers, json=payload, timeout=20)
+            r.raise_for_status()
+            data = r.json()
+            choices = data.get("choices", [])
+            if choices:
+                msg = choices[0].get("message") or {}
+                return msg.get("content", "")
+        except Exception as exc:
+            return f"Translation error: {exc}"

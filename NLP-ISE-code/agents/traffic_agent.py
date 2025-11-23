@@ -22,7 +22,7 @@ class TrafficAgent:
             combined = prompt
         return self.llm(combined)
 
-    def run(self, query: str) -> str:
+    def run(self, user_query: str, query: str) -> str:
         query_lower = query.lower()
         results = []
 
@@ -101,7 +101,7 @@ class TrafficAgent:
 
         combined_result = "\n\n".join(results)
         prompt = (
-            f"Traffic query: {query}\nTraffic information:\n{combined_result}\n"
+            f"Traffic query: {user_query}\nTraffic information:\n{combined_result}\n"
             "Provide a comprehensive traffic response."
         )
         return self._call_llm(prompt)

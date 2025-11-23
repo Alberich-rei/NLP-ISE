@@ -11,8 +11,11 @@ from config.language_settings import (
     get_language_preference,
     set_language_preference,
 )
-from utils.translation_utils import translate_from_english, translate_to_english
+from utils.translation_utils import TranslateModel
 from rag.upload import update as upload_document
+from rag.upload import handle_code_upload as code_upload
+from rag.upload import handle_image_upload as image_upload
+
 
 # 上下文管理类
 class ConversationContext:
@@ -117,14 +120,15 @@ def load_rag():
         print(f"Error loading RAG: {e}")
         return None
 
-
 def main():
     init_db()
     llm = HKGAIModel()
+    translator = TranslateModel()
     retriever = load_rag()
     agent = create_tool_agent(llm, retriever)
     context_manager = ConversationContext(max_history=15)
-    language_preference = get_language_preference()
+    # 默认语言为英文
+    language_preference = "english"
 
     if retriever is None and CHROMA_AVAILABLE:
         print("RAG system not available. Please run rag_builder.py first.")
@@ -142,7 +146,7 @@ def main():
     print("  - status (show system status)")
     print("  - language [english|cantonese|chinese] (set display/input language)")
     print("  - exit")
-    print(f"Current language mode: {language_preference} ({SUPPORTED_LANGUAGES.get(language_preference, 'Unknown')})")
+    print(f"Current language mode: {language_preference.capitalize()}")
 
     while True:
         try:
@@ -171,14 +175,20 @@ def main():
                 f = cmd.split(" ", 1)[1]
                 try:
                     if os.path.exists(f):
-                        chunk_count = upload_document(f)
+                        if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+                            # 如果是图片文件，处理图片
+                            chunk_count = image_upload(f)
+                        elif f.lower().endswith(('.py', '.js', '.java')):  # 代码文件
+                            chunk_count = code_upload(f)
+                        else:
+                            chunk_count = upload_document(f)
                         print(f"Successfully uploaded '{f}' - Generated {chunk_count} text chunks")
                         print("Tip: You can now ask questions about this document!")
                     else:
                         print(f"File not found: {f}")
                 except Exception as e:
                     print(f"Upload failed: {e}")
-                    print("Supported formats: PDF, CSV, TXT, MD")
+                    print("Supported formats: PDF, CSV, TXT, MD, JPG,JPRG, PNG, PY, PY, JS, JAVA")
                 continue
             
             if cmd.startswith("multimodal ") and MULTIMODAL_AVAILABLE:
@@ -227,29 +237,28 @@ def main():
 
             # 直接处理用户问题
             q = cmd
-            language_preference = get_language_preference()
-
-            # 将输入翻译为英文
-            english_query = translate_to_english(llm, q, language_preference)
+            # 所有输入都翻译为英文
+            english_query = translator.translate_text(q, language_preference, "english")
 
             # 获取上下文并调用代理
             context_str = context_manager.get_context_for_agent(use_english=True)
-            
             input_data = {
+                "user_query": q,
                 "input": english_query,
                 "context": context_str,
                 "has_history": bool(context_str)
             }
-            
+
             print(f"\nRouting to appropriate agent...")
             result = agent.invoke(input_data)
             out_en = result.get("output", "")
-            answer = translate_from_english(llm, out_en, language_preference)
+            # 输出始终为英文
+            answer = out_en
             print("Answer:", answer)
 
             # 保存这轮对话到上下文
             context_manager.add_exchange(q, answer, user_en=english_query, assistant_en=out_en)
-            
+
             # 每隔几轮对话显示提示
             if len(context_manager.history) % 5 == 0 and len(context_manager.history) > 0:
                 print(f"\nTip: {len(context_manager.history)} conversations saved. Type 'history' to view or 'clear' to reset.")
