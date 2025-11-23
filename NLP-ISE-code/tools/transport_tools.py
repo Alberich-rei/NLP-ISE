@@ -29,7 +29,7 @@ class TransportTools:
         params = {
             "key": AMAP_API_KEY,
             "address": address,
-            "city": "北京",  # 可选：限定城市，提高精度（你的场景是清华大学，限定北京）
+            # "city": "北京",  # 可选：限定城市，提高精度（你的场景是清华大学，限定北京）
             "output": "json"
         }
         try:
@@ -51,7 +51,7 @@ class TransportTools:
     # -----------------------------
     # 2 POI 搜索（核心：调用高德周边搜索 API）
     # -----------------------------
-    def find_poi(self, lon: float, lat: float, keyword: str, return_top_n: int = 1):
+    def find_poi(self, lon: float, lat: float, keyword: str, city: str, return_top_n: int = 1):
         print(f"\n===== POI 搜索调试 =====")
         print(f"输入参数：lon={lon}, lat={lat}, keyword={keyword}, return_top_n={return_top_n}")
 
@@ -62,6 +62,7 @@ class TransportTools:
             "key": AMAP_API_KEY,
             "location": f"{lon},{lat}",  # 中心点经纬度
             "keywords": keyword,  # 搜索关键词（中文优先）
+            "city": city,  # 限定城市（提高准确度）
             "radius": 2000,  # 搜索半径2公里（和之前一致）
             "offset": 20,  # 每页记录数据
             "page": 1,  # 第1页（免费版最多10页，这里取第1页足够）

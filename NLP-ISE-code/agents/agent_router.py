@@ -11,6 +11,7 @@ from .rag_agent import RAGAgent
 from .traffic_agent import TrafficAgent
 from .weather_agent import WeatherAgent
 from .transport_agent import TransportAgent
+from .web_agent import WebAgent
 
 
 class AgentRouter:
@@ -23,6 +24,7 @@ class AgentRouter:
         self.transport_agent = TransportAgent(llm)
         self.rag_agent = RAGAgent(llm, retriever)
         self.general_agent = GeneralAgent(llm)
+        self.web_agent = WebAgent(llm)
 
     def _classify_intent(self, query: str) -> str:
         """Use the source selector to classify query intent."""
@@ -55,6 +57,8 @@ class AgentRouter:
             result = self.traffic_agent.run(enhanced_query)
         elif intent == "transport":
             result = self.transport_agent.run(enhanced_query)
+        elif intent == "web":
+            result = self.web_agent.run(enhanced_query)
         # elif intent == "general":
         #     result = self.general_agent.run(enhanced_query)
         else:
