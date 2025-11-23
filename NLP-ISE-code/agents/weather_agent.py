@@ -56,7 +56,7 @@ class WeatherAgent:
             combined = prompt
         return self.llm(combined)
 
-    def run(self, query: str, **kwargs) -> str:
+    def run(self, user_query: str, query: str, **kwargs) -> str:
         query_lower = query.lower()
         has_chinese = any("\u4e00" <= ch <= "\u9fff" for ch in query)
         lang = "tc" if has_chinese else "en"
@@ -201,7 +201,7 @@ class WeatherAgent:
             combined_result = "未获取到相关天气信息。"
 
         prompt = (
-            f"Weather query: {query}\nWeather information:\n{combined_result}\n"
+            f"Weather query: {user_query}\nWeather information:\n{combined_result}\n"
             "Provide a comprehensive and helpful weather response."
         )
         return self._call_llm(prompt)

@@ -10,6 +10,7 @@ from .general_agent import GeneralAgent
 from .rag_agent import RAGAgent
 from .traffic_agent import TrafficAgent
 from .weather_agent import WeatherAgent
+from .transport_agent import TransportAgent
 
 
 class AgentRouter:
@@ -19,6 +20,7 @@ class AgentRouter:
         self.weather_agent = WeatherAgent(llm)
         self.finance_agent = FinanceAgent(llm)
         self.traffic_agent = TrafficAgent(llm)
+        self.transport_agent = TransportAgent(llm)
         self.rag_agent = RAGAgent(llm, retriever)
         self.general_agent = GeneralAgent(llm)
 
@@ -33,24 +35,27 @@ class AgentRouter:
 
     def invoke(self, input_data: Dict[str, Any]) -> Dict[str, str]:
         """Process the user input and route to the appropriate agent."""
-        query = input_data.get("input", "")
+        user_query = input_data.get("user_query", " ")
+        processed_quert = input_data.get("input", "")
         context = input_data.get("context", "")
         has_history = input_data.get("has_history", False)
 
         if has_history and context:
-            enhanced_query = f"Context from previous conversation:\n{context}\n\nCurrent question: {query}"
+            enhanced_query = f"Context from previous conversation:\n{context}\n\nCurrent question: {processed_quert}"
         else:
-            enhanced_query = query
+            enhanced_query = processed_quert
 
-        intent = self._classify_intent(query)
+        intent = self._classify_intent(processed_quert)
         print(f"Intent detected: {intent}")
 
         if intent == "weather":
-            result = self.weather_agent.run(enhanced_query)
+            result = self.weather_agent.run(user_query, enhanced_query)
         elif intent == "finance":
-            result = self.finance_agent.run(enhanced_query)
+            result = self.finance_agent.run(user_query, enhanced_query)
         elif intent == "traffic":
             result = self.traffic_agent.run(enhanced_query)
+        elif intent == "transport":
+            result = self.transport_agent.run(enhanced_query)
         # elif intent == "general":
         #     result = self.general_agent.run(enhanced_query)
         else:

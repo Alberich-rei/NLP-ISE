@@ -13,7 +13,7 @@ class HKGAIClient:
             "Content-Type": "application/json"
         }
 
-    def chat(self, system_prompt, user_prompt, max_tokens=500, temperature=0.7):
+    def chat(self, system_prompt, user_prompt, max_tokens=1000, temperature=0.7):
         endpoint = f"{self.base_url}/chat/completions"
         payload = {
             "model": self.model_id,
@@ -22,11 +22,11 @@ class HKGAIClient:
                 {"role":"user","content":user_prompt}
             ],
             "max_tokens": max_tokens,
-            "temperature": temperature
+            "temperature": temperature,
         }
 
         try:
-            r = requests.post(endpoint, headers=self.headers, json=payload, timeout=20)
+            r = requests.post(endpoint, headers=self.headers, json=payload, timeout=30)
             r.raise_for_status()
             data = r.json()
             choices = data.get("choices", [])
