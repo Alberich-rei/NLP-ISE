@@ -16,3 +16,4 @@ pytesseract
 pillow
 easyocr
 google-cloud-vision
+fastapi
