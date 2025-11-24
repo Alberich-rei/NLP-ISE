@@ -1,5 +1,5 @@
 import os
-
+import time
 # 使用独立的 LLM 实现
 from llm.hk_llm_independent import HKGAIModel
 
@@ -16,61 +16,7 @@ from rag.upload import update as upload_document
 from rag.upload import handle_code_upload as code_upload
 from rag.upload import handle_image_upload as image_upload
 
-
-# 上下文管理类
-class ConversationContext:
-    def __init__(self, max_history=10):
-        self.history = []
-        self.max_history = max_history
-    
-    def add_exchange(self, user_input: str, agent_output: str, user_en: str = None, assistant_en: str = None):
-        """添加一轮对话到历史记录"""
-        import datetime
-        user_en = user_en if user_en is not None else user_input
-        assistant_en = assistant_en if assistant_en is not None else agent_output
-        self.history.append({
-            "user": user_input,
-            "assistant": agent_output,
-            "user_en": user_en,
-            "assistant_en": assistant_en,
-            "timestamp": datetime.datetime.now().isoformat()
-        })
-        
-        # 保持历史记录在限制范围内
-        if len(self.history) > self.max_history:
-            self.history = self.history[-self.max_history:]
-    
-    def get_context_for_agent(self, use_english: bool = True) -> str:
-        """获取格式化的上下文字符串用于代理"""
-        if not self.history:
-            return ""
-        
-        # 只使用最近3轮对话作为上下文，避免token过载
-        recent_history = self.history[-3:]
-        context_parts = []
-        user_key = "user_en" if use_english else "user"
-        assistant_key = "assistant_en" if use_english else "assistant"
-        
-        for i, exchange in enumerate(recent_history, 1):
-            user_text = exchange.get(user_key) or exchange.get("user")
-            assistant_text = exchange.get(assistant_key) or exchange.get("assistant")
-            context_parts.append(f"Previous Q{i}: {user_text}")
-            snippet = assistant_text if assistant_text is not None else ""
-            context_parts.append(f"Previous A{i}: {snippet[:200]}...")  # 限制长度
-        
-        return "\n".join(context_parts) if context_parts else ""
-    
-    def get_history_summary(self) -> str:
-        """获取对话历史摘要"""
-        if not self.history:
-            return "No conversation history."
-        
-        return f"Conversation history: {len(self.history)} exchanges, last update: {self.history[-1]['timestamp'][:19]}"
-    
-    def clear_history(self):
-        """清空历史记录"""
-        self.history = []
-        print("Conversation history cleared.")
+from utils.context_manager import ConversationContext
 
 # 检查是否有多模态模块
 try:
@@ -129,6 +75,7 @@ def main():
     context_manager = ConversationContext(max_history=15)
     # 默认语言为英文
     language_preference = "english"
+
 
     if retriever is None and CHROMA_AVAILABLE:
         print("RAG system not available. Please run rag_builder.py first.")
@@ -233,6 +180,9 @@ def main():
                 print(f"Context: {len(context_manager.history)} conversations stored")
                 language_preference = get_language_preference()
                 print(f"Language mode: {language_preference} ({SUPPORTED_LANGUAGES.get(language_preference, 'Unknown')})")
+                avg = context_manager.get_average_response_time()
+                if avg is not None:
+                    print(f"Average response time: {avg:.3f} s")
                 continue
 
             # 直接处理用户问题
@@ -250,14 +200,18 @@ def main():
             }
 
             print(f"\nRouting to appropriate agent...")
+            # measure agent invocation time
+            start = time.time()
             result = agent.invoke(input_data)
+            duration = time.time() - start
             out_en = result.get("output", "")
             # 输出始终为英文
             answer = out_en
             print("Answer:", answer)
+            print(f"(Handled in {duration:.3f}s)")
 
-            # 保存这轮对话到上下文
-            context_manager.add_exchange(q, answer, user_en=english_query, assistant_en=out_en)
+            # 保存这轮对话到上下文（包含耗时）
+            context_manager.add_exchange(q, answer, user_en=english_query, assistant_en=out_en, duration_seconds=duration)
 
             # 每隔几轮对话显示提示
             if len(context_manager.history) % 5 == 0 and len(context_manager.history) > 0:

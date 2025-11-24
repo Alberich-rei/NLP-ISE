@@ -17,3 +17,5 @@ pillow
 easyocr
 google-cloud-vision
 fastapi
+chardet
+python-multipart

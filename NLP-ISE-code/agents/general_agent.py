@@ -25,8 +25,8 @@ class GeneralAgent:
         query_lower = query.lower()
 
         # 检查是否是问候语
-        if any(greeting in query_lower or greeting in query for greeting in ["你好", "hello", "谢谢", "thank", "再见", "goodbye"]):
-            return self.tools.get_greeting_response(query)
+        # if any(greeting in query_lower or greeting in query for greeting in ["你好", "hello", "谢谢", "thank", "再见", "goodbye"]):
+        #     return self.tools.get_greeting_response(query)
 
         # 检查是否询问系统能力
         if any(

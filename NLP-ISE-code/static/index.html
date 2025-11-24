@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motorola Cartoon Beeper Mechanical</title>
+    <title>Motorola Cartoon Beeper Mechanical v2</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Patrick+Hand&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,9 +26,7 @@
             --font-cartoon: 'Patrick Hand', cursive;
             --color-brown: #4a332d;
             --color-cream: #fff8e1;
-            --color-orange-bg: #fb923c;
-            --color-orange-light: #ffedd5;
-            --color-metal: #78716c; /* 新增金属色 */
+            --color-metal: #78716c;
         }
 
         body {
@@ -41,21 +39,21 @@
 
         /* 滚动条优化 */
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: var(--color-orange-light); }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #ffedd5; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ea580c; border-radius: 4px; }
 
         /* 阴影效果 */
         .shadow-hard { box-shadow: 8px 8px 0px 0px var(--color-brown); }
         .shadow-hard-sm { box-shadow: 4px 4px 0px 0px var(--color-brown); }
         
-        /* 屏幕纹理 (加强版) */
+        /* 屏幕纹理 */
         .crt-screen {
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
             background-size: 100% 4px;
             box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
         }
 
-        /* 警示条纹纹理 */
+        /* 警示条纹 */
         .hazard-stripe {
             background-image: repeating-linear-gradient(45deg, #facc15, #facc15 10px, #1c1917 10px, #1c1917 20px);
         }
@@ -79,15 +77,13 @@
         .markdown-body ul, .markdown-body ol { padding-left: 1.2em; }
         .markdown-body code { background: rgba(251, 146, 60, 0.2); padding: 0 4px; border-radius: 2px; font-size: 0.95em;}
 
-        /* NOTICE 动画 */
+        /* 动画 */
         @keyframes wiggle {
             0%, 100% { transform: rotate(-3deg) scale(1); }
             50% { transform: rotate(3deg) scale(1.1); }
         }
         .animate-wiggle { animation: wiggle 2s ease-in-out infinite; }
-        .animate-wiggle:hover { animation-duration: 0.5s; }
-
-        /* 开机文字闪烁 */
+        
         @keyframes blink { 50% { opacity: 0; } }
         .cursor-blink { animation: blink 1s step-end infinite; }
     </style>
@@ -101,6 +97,9 @@
         // --- API 交互 ---
         const chatAPI = async (question) => {
             try {
+                // 模拟网络延迟，让 Thinking 效果展示出来 (生产环境请去掉 setTimeout)
+                // await new Promise(r => setTimeout(r, 2000)); 
+                
                 const resp = await fetch("/api/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -111,6 +110,32 @@
             } catch (e) {
                 return "ERROR: DISCONNECTED.";
             }
+        };
+
+        // --- 组件: Thinking 动态效果 ---
+        const ThinkingIndicator = () => {
+            const [progress, setProgress] = useState(0);
+            
+            // 模拟进度条循环
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setProgress(p => (p >= 10 ? 0 : p + 1));
+                }, 100);
+                return () => clearInterval(timer);
+            }, []);
+
+            // 生成进度条字符串 [|||||.....]
+            const bar = "[" + "|".repeat(progress) + ".".repeat(10 - progress) + "]";
+
+            return (
+                <div className="text-[#4a332d] font-pixel text-lg animate-pulse">
+                    <div className="flex items-center gap-2 mb-1">
+                        <i data-lucide="cpu" className="w-4 h-4 animate-spin"></i>
+                        <span>PROCESSING...</span>
+                    </div>
+                    <div className="font-bold tracking-widest">{bar}</div>
+                </div>
+            );
         };
 
         // --- 组件: 开机画面 ---
@@ -134,9 +159,7 @@
             return (
                 <div className="fixed inset-0 bg-[#fff8e1] flex flex-col items-center justify-center z-[100] text-[#4a332d]">
                     <div className="mb-8 transform scale-150">
-                         <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
-                            GENIUSO
-                        </h1>
+                         <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">GENIUSO</h1>
                     </div>
                     <div className="w-64 h-4 border-2 border-[#4a332d] p-0.5 rounded mb-4 shadow-hard-sm bg-[#78716c]">
                         <div className="h-full bg-orange-500 animate-[width_2s_ease-out_forwards]" style={{width: '100%'}}></div>
@@ -153,7 +176,11 @@
             const [input, setInput] = useState("");
             const [messages, setMessages] = useState([]);
             const [cards, setCards] = useState([]);
+            
+            // 状态区分：isWaiting(等待API返回), isTyping(打字机效果中)
+            const [isWaiting, setIsWaiting] = useState(false);
             const [isTyping, setIsTyping] = useState(false);
+            
             const [sysStatus, setSysStatus] = useState("READY");
             const [uploading, setUploading] = useState(false);
             
@@ -163,9 +190,9 @@
 
             useEffect(() => {
                 if (screenRef.current) screenRef.current.scrollTop = screenRef.current.scrollHeight;
-            }, [messages]);
+            }, [messages, isWaiting]); // 当 isWaiting 变化时也滚动
 
-            useEffect(() => { if (window.lucide && booted) window.lucide.createIcons(); }, [booted, cards, messages]);
+            useEffect(() => { if (window.lucide && booted) window.lucide.createIcons(); }, [booted, cards, messages, isWaiting]);
 
             const handleUpload = async (e) => {
                 const file = e.target.files[0];
@@ -188,16 +215,24 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (!input.trim() || isTyping) return;
+                if (!input.trim() || isTyping || isWaiting) return;
                 
                 const userText = input;
                 setInput("");
                 setMessages(prev => [...prev, { id: Date.now(), text: `> ${userText}`, sender: 'USER' }]);
+                
+                // 1. 进入等待状态 (显示 Thinking 动画)
                 setSysStatus("THINKING");
-                setIsTyping(true);
+                setIsWaiting(true);
 
                 try {
+                    // 2. 请求后端
                     const result = await chatAPI(userText);
+                    
+                    // 3. 收到结果，结束等待，开始打字
+                    setIsWaiting(false); 
+                    setIsTyping(true);
+                    
                     let displayed = "";
                     const msgId = Date.now();
                     setMessages(prev => [...prev, { id: msgId, text: "", sender: 'BOT' }]);
@@ -206,10 +241,11 @@
                     for (let i = 0; i < chars.length; i++) {
                         displayed += chars[i];
                         setMessages(prev => prev.map(m => m.id === msgId ? { ...m, text: displayed } : m));
-                        await new Promise(r => setTimeout(r, 10));
+                        await new Promise(r => setTimeout(r, 15));
                     }
                     createCard(displayed);
                 } catch (error) {
+                    setIsWaiting(false);
                     setMessages(prev => [...prev, { id: Date.now(), text: "ERR: NET_FAIL", sender: 'SYSTEM' }]);
                 }
                 setIsTyping(false);
@@ -243,52 +279,43 @@
                     {/* 背景元素 */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#fb923c_2px,transparent_2px)] bg-[size:24px_24px]"></div>
 
-                    {/* 左上角 Branding */}
+                    {/* Branding */}
                     <div className="absolute top-8 left-8 z-10 flex flex-col gap-1 pointer-events-none">
                         <div className="flex items-center gap-2">
-                            <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">
-                                GENIUSO
-                            </h1>
-                            <div className="animate-wiggle bg-yellow-400 text-[#4a332d] border-2 border-[#4a332d] px-3 py-0.5 rounded text-base font-bold shadow-hard-sm rotate-[-5deg]">
-                                NOTICE!
-                            </div>
+                            <h1 className="text-6xl font-bold text-orange-600 drop-shadow-[3px_3px_0px_#4a332d]">GENIUSO</h1>
+                            <div className="animate-wiggle bg-yellow-400 text-[#4a332d] border-2 border-[#4a332d] px-3 py-0.5 rounded text-base font-bold shadow-hard-sm rotate-[-5deg]">NOTICE!</div>
                         </div>
-                        <p className="text-xl font-bold text-orange-800/70 font-pixel tracking-widest pl-1">
-                            Turbo Search v.2.0
-                        </p>
+                        <p className="text-xl font-bold text-orange-800/70 font-pixel tracking-widest pl-1">Turbo Search v.2.0</p>
                     </div>
 
-                    {/* --- 主机器 (放大版: w-[720px]) --- */}
+                    {/* --- 主机器 --- */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] z-50">
-                        
-                        {/* 机器外壳 */}
                         <div className="bg-[#fb923c] border-[6px] border-[#4a332d] rounded-[40px] p-6 shadow-hard relative flex flex-col gap-5">
                             
-                            {/* 屏幕区域 (增加机械装饰) */}
+                            {/* 屏幕区域 */}
                             <div className="relative">
-                                {/* 顶部状态栏 + 电源灯 */}
+                                {/* 顶部状态栏 (增加状态灯逻辑) */}
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
                                     <div className="bg-[#4a332d] text-orange-300 px-4 py-1 rounded-b-lg text-sm font-pixel tracking-wider border-b-2 border-r-2 border-l-2 border-[#292524]">
                                         SYS: {sysStatus}
                                     </div>
-                                    <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-[#4a332d] shadow-[0_0_5px_#22c55e] animate-pulse"></div>
+                                    <div className={`w-4 h-4 rounded-full border-2 border-[#4a332d] shadow-[0_0_5px_rgba(0,0,0,0.5)] transition-colors duration-200
+                                        ${isWaiting ? 'bg-red-500 animate-ping' : 'bg-green-500'}`}></div>
                                 </div>
 
-                                {/* 屏幕边框容器 (深色金属感) */}
                                 <div className="bg-[#292524] border-[4px] border-[#4a332d] rounded-2xl p-1.5 shadow-inner relative">
-                                    
-                                    {/* 机械装饰：四角螺丝 */}
+                                    {/* 装饰螺丝 */}
                                     <div className="screw absolute -top-3 -left-3"></div>
                                     <div className="screw absolute -top-3 -right-3"></div>
                                     <div className="screw absolute -bottom-3 -left-3"></div>
                                     <div className="screw absolute -bottom-3 -right-3"></div>
 
-                                    {/* 机械装饰：右侧散热格栅 */}
+                                    {/* 散热 */}
                                     <div className="absolute right-2 top-1/2 -translate-x-1/2 flex flex-col gap-1.5 pointer-events-none opacity-70">
                                         {[...Array(6)].map((_,i) => <div key={i} className="w-1.5 h-5 bg-[#0c0a09] border-r border-b border-[#57534e] rounded-sm"></div>)}
                                     </div>
 
-                                    {/* 屏幕本体 (高度增加: h-72) */}
+                                    {/* 屏幕内容 */}
                                     <div className="bg-[#fff7ed] h-72 rounded-xl p-4 overflow-y-auto custom-scrollbar font-pixel text-xl leading-relaxed crt-screen relative mx-1" ref={screenRef}>
                                         {messages.map((msg, idx) => (
                                             <div key={msg.id} className={`mb-3 ${msg.sender === 'USER' ? 'text-orange-600 text-right' : 'text-[#4a332d] text-left'}`}>
@@ -297,17 +324,21 @@
                                                 </span>
                                             </div>
                                         ))}
+                                        
+                                        {/* --- 关键点：等待时的 Thinking 效果 --- */}
+                                        {isWaiting && (
+                                            <div className="mb-3 border-l-4 border-orange-400 pl-3">
+                                                <ThinkingIndicator />
+                                            </div>
+                                        )}
+                                        
                                     </div>
-
-                                    {/* 机械装饰：底部警示条纹 */}
                                     <div className="h-4 w-full hazard-stripe border-t-4 border-[#4a332d] mt-1.5 rounded-b-md opacity-90"></div>
                                 </div>
                             </div>
 
-                            {/* 控制面板 (放大) */}
+                            {/* 控制面板 */}
                             <div className="bg-[#fdba74] rounded-2xl border-[4px] border-[#4a332d] p-4 flex gap-4 shadow-hard-sm">
-                                
-                                {/* 输入框 (高度增加: h-14) */}
                                 <form onSubmit={handleSubmit} className="flex-1 bg-[#fff7ed] border-[4px] border-[#4a332d] rounded-xl flex items-center px-3 shadow-inner relative">
                                     <div className="screw absolute -left-2 top-1/2 -translate-y-1/2 scale-75"></div>
                                     <span className="text-2xl font-pixel text-orange-400 mr-2 animate-pulse pl-4">{">"}</span>
@@ -317,58 +348,40 @@
                                         onChange={(e) => setInput(e.target.value)}
                                         className="w-full bg-transparent border-none outline-none font-pixel text-2xl text-[#4a332d] h-14"
                                         placeholder="INPUT COMMAND..."
-                                        disabled={isTyping}
+                                        disabled={isTyping || isWaiting}
                                         autoFocus
                                     />
                                 </form>
 
-                                {/* 按钮组 (尺寸增加: w-14 h-14) */}
                                 <div className="flex gap-3 shrink-0 relative">
                                     <div className="screw absolute -right-2 top-1/2 -translate-y-1/2 scale-75 z-10"></div>
-                                    {/* Send */}
-                                    <button type="submit" onClick={handleSubmit} disabled={isTyping}
-                                        className="w-14 h-14 bg-[#86efac] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#4ade80]">
+                                    <button type="submit" onClick={handleSubmit} disabled={isTyping || isWaiting}
+                                        className="w-14 h-14 bg-[#86efac] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#4ade80] disabled:opacity-50">
                                         <i data-lucide="send" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
                                     </button>
-                                    {/* Upload */}
                                     <label className="w-14 h-14 bg-[#93c5fd] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center cursor-pointer hover:bg-[#60a5fa]">
                                         <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
                                         {uploading ? <i data-lucide="loader" className="w-7 h-7 animate-spin text-[#4a332d]"></i> : <i data-lucide="paperclip" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>}
                                     </label>
-                                    {/* Clear */}
                                     <button type="button" onClick={() => {setMessages([]); setCards([]);}} 
                                         className="w-14 h-14 bg-[#fca5a5] border-[4px] border-[#4a332d] rounded-xl shadow-[3px_3px_0px_#4a332d] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center hover:bg-[#f87171]">
                                         <i data-lucide="trash" className="w-7 h-7 stroke-[3px] text-[#4a332d]"></i>
                                     </button>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
-                    {/* --- 生成的卡片 (尺寸加大) --- */}
+                    {/* Cards (无变化) */}
                     {cards.map((card) => (
-                        <div
-                            key={card.id}
-                            className="absolute w-80 bg-white border-[4px] border-[#4a332d] rounded-lg cursor-grab active:cursor-grabbing shadow-hard animate-[pop_0.3s_ease-out]"
-                            style={{ 
-                                left: card.x, 
-                                top: card.y,
-                                transform: `rotate(${card.rotate}deg) scale(${draggingId === card.id ? 1.05 : 1})`,
-                                zIndex: draggingId === card.id ? 100 : 10
-                            }}
-                            onMouseDown={(e) => handleMouseDown(e, card.id)}
-                        >
-                            {/* 票据装饰线 */}
+                        <div key={card.id} className="absolute w-80 bg-white border-[4px] border-[#4a332d] rounded-lg cursor-grab active:cursor-grabbing shadow-hard animate-[pop_0.3s_ease-out]"
+                            style={{ left: card.x, top: card.y, transform: `rotate(${card.rotate}deg) scale(${draggingId === card.id ? 1.05 : 1})`, zIndex: draggingId === card.id ? 100 : 10 }}
+                            onMouseDown={(e) => handleMouseDown(e, card.id)}>
                             <div className="border-b-[3px] border-dashed border-[#4a332d] p-1.5 bg-yellow-50 rounded-t-lg flex justify-between items-center">
                                 <div className="flex gap-1">{[...Array(5)].map((_,i)=><div key={i} className="w-1.5 h-1.5 rounded-full bg-[#4a332d]/30"></div>)}</div>
                             </div>
-                            <div className="p-4 font-pixel text-[#4a332d] text-lg leading-snug markdown-body" 
-                                dangerouslySetInnerHTML={{ __html: marked.parse(card.content) }}>
-                            </div>
-                            <div className="bg-gray-100 p-1.5 border-t-[3px] border-[#4a332d] text-xs text-center font-bold text-gray-400 rounded-b-lg">
-                                OUTPUT RECORD #{card.id.toString().slice(-4)}
-                            </div>
+                            <div className="p-4 font-pixel text-[#4a332d] text-lg leading-snug markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(card.content) }}></div>
+                            <div className="bg-gray-100 p-1.5 border-t-[3px] border-[#4a332d] text-xs text-center font-bold text-gray-400 rounded-b-lg">OUTPUT RECORD #{card.id.toString().slice(-4)}</div>
                         </div>
                     ))}
                 </div>
