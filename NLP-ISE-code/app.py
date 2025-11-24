@@ -19,6 +19,9 @@ import chardet
 
 from utils.context_manager import ConversationContext
 
+# 导入 RAG 相关的工具和初始化函数
+from main import load_rag  # 导入你提供的 load_rag 函数
+
 app = FastAPI()
 
 
@@ -78,7 +81,48 @@ def load_rag():
         print(f"Error loading RAG: {e}")
         return None
 
+# 尝试导入 Chroma
+try:
+    from langchain_community.vectorstores import Chroma
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+
+    CHROMA_AVAILABLE = True
+    print("Chroma available")
+except ImportError as e:
+    CHROMA_AVAILABLE = False
+    print(f"Chroma not available: {e}")
+
+PERSIST_DIR = "chroma_db"
+EMB_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+
+def load_rag():
+    if not CHROMA_AVAILABLE:
+        return None
+
+    if not os.path.exists(PERSIST_DIR):
+        print("Run rag_builder.py first.")
+        return None
+
+    try:
+        emb = HuggingFaceEmbeddings(model_name=EMB_MODEL)
+        db = Chroma(
+            persist_directory=PERSIST_DIR, 
+            embedding_function=emb
+        )
+        retriever = db.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": 5}
+        )
+        return retriever
+    except Exception as e:
+        print(f"Error loading RAG: {e}")
+        return None
+    
+
 init_db()
+
+retriever = load_rag()
 llm = HKGAIModel()
 translator = TranslateModel()
 retriever = load_rag()
