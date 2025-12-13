@@ -63,7 +63,6 @@ def _extract_text(path: Path) -> str:
         return _load_text(path)
     raise ValueError(f"Unsupported file type: {suffix}")
 
-#处理图片
 def extract_text_from_image(image_path: str) -> str:
     """使用 Google Cloud Vision API 和 API 密钥从图片中提取文本"""
     
@@ -93,26 +92,94 @@ def extract_text_from_image(image_path: str) -> str:
 
     # 发送 POST 请求到 Vision API
     response = requests.post(url, json=json_data)
-
-    # 打印响应的内容
-    #print("API Response:", response.json())  # 打印 API 返回的完整响应内容
+    
+    # 打印 API 返回的响应内容
+    print("API Response:", response.json())  # 打印返回的完整响应内容
 
     # 解析返回结果
     result = response.json()
     if "responses" in result:
         texts = result["responses"][0].get("textAnnotations", [])
         if texts:
+            print("Text Detected:", texts[0]["description"].strip())  # 打印提取的文本
             return texts[0]["description"].strip()  # 返回第一个识别的文本块
     return "未从图片中提取到文本"
+
+
+def extract_image_features(image_path: str) -> str:
+    """使用Google Vision API 提取图像特征（标签和物体检测）"""
+    
+    # 设置 API 密钥作为请求参数
+    url = "https://vision.googleapis.com/v1/images:annotate?key=" + config.VISION_KEY
+    # 读取图片内容并转换为Base64编码
+    with io.open(image_path, 'rb') as image_file:
+        image_content = image_file.read()
+        base64_image = base64.b64encode(image_content).decode("utf-8")  # 转为Base64字符串
+    print("开始提取图像特征...")
+
+    # 构建请求体（标签检测和物体检测）
+    json_data = {
+        "requests": [
+            {
+                "image": {
+                    "content": base64_image
+                },
+                "features": [
+                    {
+                        "type": "LABEL_DETECTION",  # 标签检测（适用于物体分类等）
+                        "maxResults": 10
+                    },
+                    {
+                        "type": "OBJECT_LOCALIZATION",  # 物体检测（适用于定位图片中的物体）
+                        "maxResults": 5
+                    }
+                ]
+            }
+        ]
+    }
+
+    # 发送请求到 Vision API
+    response = requests.post(url, json=json_data)
+
+    # 打印 API 返回的响应内容
+    print("API Response:", response.json())  # 打印返回的内容
+
+    # 解析返回的结果
+    result = response.json()
+    if "responses" in result:
+        labels = result["responses"][0].get("labelAnnotations", [])
+        objects = result["responses"][0].get("localizedObjectAnnotations", [])
+        
+        # 提取图像中的标签（如果有）
+        label_desc = ", ".join([label["description"] for label in labels]) if labels else "No labels detected"
+        
+        # 提取图像中的物体（如果有）
+        object_desc = ", ".join([obj["name"] for obj in objects]) if objects else "No objects detected"
+
+        print(f"标签检测结果: {label_desc}")
+        print(f"物体检测结果: {object_desc}")
+        
+        return f"标签检测结果: {label_desc}\n物体检测结果: {object_desc}"
+    
+    return "未检测到有效的图像特征。"
+
+
 
 #处理图片上传
 def handle_image_upload(file_path: str) -> int:
     """处理图片上传并将其文本存入Chroma"""
     try:
-        # 处理图片并提取文本
-        text = extract_text_from_image(file_path)  # 使用EasyOCR从图片中提取文本
-        if not text:
-            raise ValueError("图片中未能提取到文本。")
+        text = ""  # 明确初始化文本变量
+
+        # 尝试从图片中提取文本
+        text = extract_text_from_image(file_path)  # 使用Google Vision提取文本
+        
+        if not text:  # 如果没有文本，执行图像特征提取
+            print("未能从图片中提取到文本，开始执行特征提取。")
+            text = extract_image_features(file_path)  # 提取图像特征作为文本描述
+        
+        if not text:  # 如果文本和特征提取都失败
+            raise ValueError("图片中未能提取到有效的文本或特征。")
         
         # 将提取的文本分块并存入Chroma数据库
         chunk_count = update(file_path)  # 调用更新函数将文本存储到Chroma
@@ -121,7 +188,7 @@ def handle_image_upload(file_path: str) -> int:
     except Exception as e:
         print(f"图片上传失败: {e}")
         return 0
-    
+
 #代码上传
 def extract_text_from_code(file_path: str) -> str:
     code_file = open(file_path, 'r', encoding='utf-8')
@@ -178,17 +245,23 @@ def update(file_path: str, persist_directory: Path | None = None, model_name: st
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
     
-    # 判断文件类型
     suffix = path.suffix.lower()
-    if suffix in {".jpg", ".jpeg", ".png"}:  # 图片文件
-        text = extract_text_from_image(path)  # 从图片提取文本
-    elif suffix in {".py", ".js", ".java"}:  # 图片文件
-        text = extract_text_from_code(path)  # 从图片提取文本
-    else:
-        text = _extract_text(path)  # 普通文件的提取方法
+    text = ""  # 初始化
 
-    if not text:
-        raise ValueError("The supplied file does not contain extractable text.")
+    if suffix in {".jpg", ".jpeg", ".png", ".gif", ".bmp"}:  # 支持更多图片格式，可扩展
+        print("Processing image file...")
+        text = extract_text_from_image(path)
+        if not text or text == "未从图片中提取到文本":  # 如果OCR没文本，再用特征描述
+            print("No text detected in image, falling back to feature extraction...")
+            text = extract_image_features(path)
+        # 图片处理结束，直接跳到分块存储（不走下面的elif/else）
+    elif suffix in {".py", ".js", ".java", ".cpp", ".c", ".go"}:  # 可扩展代码类型
+        text = extract_text_from_code(path)
+    else:
+        text = _extract_text(path)  # PDF/CSV/TXT 等
+
+    if not text or text.strip() == "":  # 统一检查
+        raise ValueError("The supplied file does not contain extractable text or features.")
 
     chunks = list(_build_chunks(text))
     if not chunks:
